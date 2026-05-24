@@ -94,6 +94,15 @@ export async function appendLog(log: SymptomLog) {
   if (!user) throw new Error("unauthorised");
   await ensureProfile(user.id);
 
+  // Match the localStorage contract (lib/storage/local.ts): one log per
+  // date. If the user submits /after twice today, the later submission
+  // replaces the earlier one rather than duplicating the row — keeps
+  // /progress aggregations honest. No unique constraint to enforce this
+  // at the DB layer; the application gate is good enough for v1.
+  await db
+    .delete(symptomLogs)
+    .where(and(eq(symptomLogs.userId, user.id), eq(symptomLogs.date, log.date)));
+
   await db
     .insert(symptomLogs)
     .values({
@@ -108,6 +117,7 @@ export async function appendLog(log: SymptomLog) {
     });
 
   revalidatePath("/progress");
+  revalidatePath("/");
 }
 
 /* ----------------------------------------------------------------------- */

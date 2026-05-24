@@ -102,6 +102,25 @@ export default async function HomePage() {
           </Card>
         </RevealItem>
 
+        {user ? (
+          <RevealItem>
+            <Card className="mt-3 flex items-center justify-between gap-3 p-4">
+              <div className="space-y-0.5">
+                <p className="font-semibold text-[var(--color-ink)]">After eating?</p>
+                <p className="text-xs text-[var(--color-ink-soft)]">
+                  A quick five-tap log so trends actually fill in.
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/after">
+                  Log it
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </Card>
+          </RevealItem>
+        ) : null}
+
         {!user ? (
           <RevealItem>
             <Card className="mt-4 flex items-center justify-between gap-3 p-4">
