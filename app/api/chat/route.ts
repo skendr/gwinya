@@ -32,17 +32,26 @@ function renderPlanContext(plan: NonNullable<Awaited<ReturnType<typeof loadPlan>
   const lines: string[] = ["This user has uploaded a Speech and Language Therapy plan."];
   if (plan.textureLevel != null) {
     lines.push(
-      `Prescribed food (IDDSI texture): Level ${plan.textureLevel}. ` +
-        `Per the IDDSI clinical principle, FOODS AT OR BELOW Level ${plan.textureLevel} ` +
-        `are all within this user's plan. Foods ABOVE Level ${plan.textureLevel} ` +
-        `(closer to regular) are the case to flag.`,
+      `Prescribed food (IDDSI texture): Level ${plan.textureLevel}.\n\n` +
+        `The app uses this user-facing vocabulary when comparing a meal to ` +
+        `the plan:\n` +
+        `  - "above plan" = MORE modified than Level ${plan.textureLevel} ` +
+        `(softer than required) → within plan, safe\n` +
+        `  - "at plan"    = exactly Level ${plan.textureLevel} → within plan ` +
+        `(at the threshold the SLT set)\n` +
+        `  - "below plan" = LESS modified than Level ${plan.textureLevel} ` +
+        `(closer to regular) → OUTSIDE plan, the case to flag\n\n` +
+        `In IDDSI numbers, "above plan" means a LOWER level number. Use the ` +
+        `"above / at / below plan" vocabulary in your replies so the user ` +
+        `recognises what they see in the app.`,
     );
   }
   if (plan.fluidLevel != null) {
     lines.push(
-      `Prescribed drinks (IDDSI fluid): Level ${plan.fluidLevel}. ` +
-        `For DRINKS the relationship inverts: drinks AT OR THICKER than ` +
-        `Level ${plan.fluidLevel} are within plan; thinner drinks are the concern.`,
+      `Prescribed drinks (IDDSI fluid): Level ${plan.fluidLevel}. For ` +
+        `drinks the safety direction flips: drinks at Level ${plan.fluidLevel} ` +
+        `or THICKER are within plan; thinner drinks are below plan ` +
+        `(outside plan, the case to flag).`,
     );
   }
   if (plan.posture) lines.push(`Posture: ${plan.posture}.`);

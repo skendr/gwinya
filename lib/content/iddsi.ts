@@ -173,22 +173,44 @@ export function isFoodWithinPlan(
 }
 
 /**
- * Resolve the model's matchesPrescribed enum into a clinical category
- * the UI can act on:
- *   "within-plan"  — at or below prescribed (matches + more-modified)
- *   "above-plan"   — above prescribed (less-modified)
- *   "unknown"      — model couldn't tell, or no plan on file
+ * Resolve the model's matchesPrescribed enum into the user-facing
+ * comparison vocabulary the UI uses for badges and copy.
+ *
+ *   "above-plan" — more modified than the prescribed level (softer than
+ *                  needed). NOTE: "above" here is the colloquial
+ *                  "exceeded the plan's requirements" — clinically
+ *                  SAFER. In raw IDDSI numbers this is a LOWER level
+ *                  (L4 for an L6 user is "above plan").
+ *   "at-plan"    — exactly at the prescribed level. Within plan but
+ *                  right at the threshold the SLT set.
+ *   "below-plan" — less modified than prescribed (closer to regular).
+ *                  Outside of plan; the case to flag.
+ *   "unknown"    — model couldn't tell, or no plan on file.
+ *
+ * Three colours flow from this: above=green, at=yellow, below=red.
+ * The binary "within plan / outside plan" framing collapses it to
+ * two states; see isWithinPlan below.
  *
  * Keeps the model's three-value enum (matches/more-modified/less-modified)
- * intact in the DB and in the schema so we don't lose the precision of
- * "exactly at vs softer than" — this just collapses it for display.
+ * intact in the DB and the schema; this helper only renames it for the
+ * user's mental model.
  */
-export type PlanRelationship = "within-plan" | "above-plan" | "unknown";
+export type PlanComparison = "above-plan" | "at-plan" | "below-plan" | "unknown";
 
-export function planRelationship(
+export function planComparison(
   matches: "matches" | "more-modified" | "less-modified" | "unknown" | null,
-): PlanRelationship {
-  if (matches === "matches" || matches === "more-modified") return "within-plan";
-  if (matches === "less-modified") return "above-plan";
+): PlanComparison {
+  if (matches === "more-modified") return "above-plan";
+  if (matches === "matches") return "at-plan";
+  if (matches === "less-modified") return "below-plan";
   return "unknown";
+}
+
+/**
+ * "Within plan" = above OR at the prescribed level. The clinical truth:
+ * foods more modified than prescribed (or exactly matching) are all
+ * within the user's plan. Only below-plan is outside.
+ */
+export function isWithinPlan(c: PlanComparison): boolean {
+  return c === "above-plan" || c === "at-plan";
 }

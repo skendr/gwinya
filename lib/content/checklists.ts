@@ -19,8 +19,8 @@ export const beforeMeal: Checklist = {
     },
     {
       id: "texture",
-      prompt: "My food is within my recommended texture",
-      helper: "Softer than your prescribed level is also fine — the concern is anything less modified than your plan.",
+      prompt: "My food is within my plan",
+      helper: "Above plan (softer than prescribed) is also within plan. Below plan (less modified than prescribed) is the case to take care with.",
     },
     {
       id: "strategies",

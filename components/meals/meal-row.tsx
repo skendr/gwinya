@@ -22,14 +22,15 @@ type Props = {
   imageUrl: string | null;
 };
 
-// IDDSI: foods at or below the prescribed level are all within the
-// user's plan, so matches AND more-modified both render as the same
-// green "within plan" state. Above-plan (less-modified) is the case
-// that warrants the coral badge.
-const matchTone: Record<Match, { tone: "teal" | "gold" | "coral" | "cream"; label: string }> = {
-  matches: { tone: "teal", label: "within plan" },
-  "more-modified": { tone: "teal", label: "within plan (softer)" },
-  "less-modified": { tone: "coral", label: "above plan" },
+// Three-colour signal matching the user-facing vocabulary defined in
+// lib/content/iddsi.ts:planComparison:
+//   above plan (more-modified) → green/teal  → within plan
+//   at plan    (matches)       → yellow/gold → within plan (at threshold)
+//   below plan (less-modified) → red/rose    → outside plan
+const matchTone: Record<Match, { tone: "teal" | "gold" | "rose" | "cream"; label: string }> = {
+  "more-modified": { tone: "teal", label: "above plan" },
+  matches: { tone: "gold", label: "at plan" },
+  "less-modified": { tone: "rose", label: "below plan" },
   unknown: { tone: "cream", label: "no plan" },
 };
 

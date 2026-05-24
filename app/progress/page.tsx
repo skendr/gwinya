@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth/server";
 import { getLogs, getStreak, getRecentScans } from "@/lib/storage/actions";
 import { isoDay, daysBetween, relativeDay } from "@/lib/format/dates";
-import { planRelationship, type IddsiLevel } from "@/lib/content/iddsi";
+import { planComparison, isWithinPlan, type IddsiLevel } from "@/lib/content/iddsi";
 
 export const metadata = { title: "Progress" };
 
@@ -63,13 +63,13 @@ export default async function ProgressPage() {
   const daysSince = lastCheckIn ? daysBetween(lastCheckIn, today) : null;
   const checkInDays = logs.map((l) => l.date);
   const { confidence, coughingFlags, fatigue } = aggregateLast14(logs);
-  // Within-plan rate computed from saved meals. The IDDSI rule
-  // ("at or below the prescribed level is fine") lives in
-  // lib/content/iddsi.ts:planRelationship — using the helper here so
-  // any future enum tweaks only have to be made in one place.
-  const relationships = meals.map((m) => planRelationship(m.matchesPrescribed));
-  const comparableMeals = relationships.filter((r) => r !== "unknown").length;
-  const withinPlanCount = relationships.filter((r) => r === "within-plan").length;
+  // Within-plan rate from saved meals. The rule ("more modified than
+  // prescribed, or exactly at it, is within plan") lives in
+  // lib/content/iddsi.ts:planComparison + isWithinPlan — using both
+  // helpers so any future enum tweaks live in one place.
+  const comparisons = meals.map((m) => planComparison(m.matchesPrescribed));
+  const comparableMeals = comparisons.filter((c) => c !== "unknown").length;
+  const withinPlanCount = comparisons.filter(isWithinPlan).length;
   const withinPlanRate = comparableMeals
     ? Math.round((withinPlanCount / comparableMeals) * 100)
     : null;
@@ -205,20 +205,21 @@ export default async function ProgressPage() {
                       </div>
                       <Badge
                         tone={
-                          m.matchesPrescribed === "matches" ||
                           m.matchesPrescribed === "more-modified"
                             ? "teal"
-                            : m.matchesPrescribed === "less-modified"
-                              ? "coral"
-                              : "cream"
+                            : m.matchesPrescribed === "matches"
+                              ? "gold"
+                              : m.matchesPrescribed === "less-modified"
+                                ? "rose"
+                                : "cream"
                         }
                       >
-                        {m.matchesPrescribed === "matches"
-                          ? "within plan"
-                          : m.matchesPrescribed === "more-modified"
-                            ? "within plan (softer)"
+                        {m.matchesPrescribed === "more-modified"
+                          ? "above plan"
+                          : m.matchesPrescribed === "matches"
+                            ? "at plan"
                             : m.matchesPrescribed === "less-modified"
-                              ? "above plan"
+                              ? "below plan"
                               : "no plan"}
                       </Badge>
                     </Card>
