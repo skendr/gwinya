@@ -1,0 +1,60 @@
+name: Deploy to Vercel (production)
+
+# Every push to main publishes a fresh production deployment on Vercel.
+# We use the CLI rather than Vercel's GitHub App because the project's
+# Vercel account doesn't have a GitHub Login Connection set up — this
+# workflow needs only an API token, an org id, and a project id (set
+# as repo secrets) and works without the GitHub App.
+#
+# Required secrets (Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN       : create at https://vercel.com/account/tokens
+#                        (scope it to the team that owns the project)
+#   VERCEL_ORG_ID      : team_NJiRjhtGQXFuOW4gE1MtdBUr
+#   VERCEL_PROJECT_ID  : prj_uUzXQUPuv5eKF9FgJDO5ZwmiY9Gk
+
+on:
+  push:
+    branches: [main]
+  # Allow on-demand redeploys from the Actions tab without a push.
+  workflow_dispatch:
+
+# Prevent overlapping production deploys — if a second push lands while
+# the first is still building, cancel the in-flight one.
+concurrency:
+  group: deploy-vercel-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://gwinya.vercel.app
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel project + env
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy prebuilt output
+        id: deploy
+        run: |
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "deployment_url=$url" >> "$GITHUB_OUTPUT"
+          echo "::notice title=Vercel deploy::$url (aliased to https://gwinya.vercel.app)"
