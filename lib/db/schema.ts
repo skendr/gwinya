@@ -61,6 +61,8 @@ export const profiles = pgTable("profiles", {
 /* Clinical plan (entered by the user from their SLT's instructions)       */
 /* ----------------------------------------------------------------------- */
 
+export type EducationalLink = { label: string; url: string };
+
 export const clinicalPlan = pgTable(
   "clinical_plan",
   {
@@ -70,7 +72,26 @@ export const clinicalPlan = pgTable(
     strategies: jsonb("strategies").$type<string[]>().default(sql`'[]'::jsonb`),
     exercises: jsonb("exercises").$type<string[]>().default(sql`'[]'::jsonb`),
     foodsToAvoid: jsonb("foods_to_avoid").$type<string[]>().default(sql`'[]'::jsonb`),
+    /** SLT-personalised flags (handwritten in the PLAN box). Treated more
+     * urgently in chat than the standard printed warning list. */
     redFlags: jsonb("red_flags").$type<string[]>().default(sql`'[]'::jsonb`),
+    /** Printed posture instruction from the slip header. */
+    posture: text("posture"),
+    /** Only checkboxes that were actually ticked on the slip. */
+    specialPrecautions: jsonb("special_precautions").$type<string[]>().default(sql`'[]'::jsonb`),
+    /** Standard form printed warning list. Kept separate from `redFlags` —
+     * see lib/ai/slt-slip-schema.ts for the rationale. */
+    warningSigns: jsonb("warning_signs").$type<string[]>().default(sql`'[]'::jsonb`),
+    educationalLinks: jsonb("educational_links")
+      .$type<EducationalLink[]>()
+      .default(sql`'[]'::jsonb`),
+    /** Verbatim handwriting from the PLAN box. Preserved for audit so
+     * neither us nor the model can paraphrase a clinician's words. */
+    rawPlanText: text("raw_plan_text"),
+    /** Storage key under the clinical-plans bucket: "<user_id>/<scan_id>.<ext>". */
+    sourceImagePath: text("source_image_path"),
+    parsedConfidence: text("parsed_confidence"), // 'low'|'medium'|'high'
+    parsedAt: timestamp("parsed_at", { withTimezone: true }),
     sltName: text("slt_name"),
     sltContact: text("slt_contact"),
     reviewDate: date("review_date"),
