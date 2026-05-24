@@ -221,27 +221,26 @@ async function testRedFlagDetector() {
 //    using only those cookies. This is the path real users take.
 // ────────────────────────────────────────────────────────────────────────
 async function testPasswordFlowViaForm() {
-  log("== test 5: password sign-up flow via the public form ==");
+  log("== test 5: password sign-up flow via the public /sign-in form ==");
   const email = `e2e-pw+${Date.now()}@gwinya.test`;
   const password = `Pw-${Math.random().toString(36).slice(2)}-${Date.now()}`;
 
-  // Step 1: fetch the form to capture the Next.js Server Action ID.
-  const formPage = await fetch(`${SITE_URL}/sign-in`, { redirect: "manual" });
+  // 1) Fetch the rendered page to capture Next's encoded server-action id.
+  const formPage = await fetch(`${SITE_URL}/sign-in`);
   const html = await formPage.text();
-  const actionMatch = html.match(/data-action="([0-9a-f]{40,})"/i) ||
-    html.match(/"action":\s*"([0-9a-f]{40,})"/i);
-  if (!actionMatch) {
-    // Some Next 15 builds inline the action id differently; fall back to
-    // directly calling the action endpoint via fetch with the raw form,
-    // which is what the form does at runtime.
-    log("   (no action id in HTML; calling form POST with FormData multipart)");
+  const idMatch = html.match(/\$ACTION_ID_([0-9a-f]{20,})/);
+  if (!idMatch) {
+    fail("couldn't find $ACTION_ID_ in sign-in HTML");
+    return;
   }
+  const actionId = idMatch[1];
+  log(`   action id: ${actionId.slice(0, 16)}…`);
 
-  // Posting to /sign-in with the form fields triggers the action; Next routes
-  // the body to the server action handler bound at build time. With
-  // experimental.useCache (not enabled here) and the default server-action
-  // handler, the response is a redirect to `next` carrying the auth cookies.
+  // 2) POST the form with the exact field set Next expects: the email,
+  //    password, next, plus the hidden $ACTION_ID_<hash>="" field that
+  //    tells Next which server action to invoke.
   const fd = new FormData();
+  fd.append(`$ACTION_ID_${actionId}`, "");
   fd.append("email", email);
   fd.append("password", password);
   fd.append("next", "/");
@@ -250,43 +249,57 @@ async function testPasswordFlowViaForm() {
     method: "POST",
     body: fd,
     redirect: "manual",
-    headers: { "Next-Action": "passwordSignIn" },
   });
 
-  log(`   form POST status=${post.status}`);
+  log(`   form POST status=${post.status} location=${post.headers.get("location") ?? "-"}`);
   const setCookies = post.headers.getSetCookie?.() ?? [];
-  log(`   Set-Cookie headers: ${setCookies.length}`);
-
-  // The form might land on /sign-in?error=... OR redirect to / with cookies.
-  // Either way the auth cookies, if minted, are in setCookies. Parse them.
-  const cookieJar = setCookies
+  const authCookies = setCookies
     .map((c) => c.split(";")[0])
-    .filter((c) => /^sb-[a-z0-9]+-auth-token/.test(c))
-    .join("; ");
+    .filter((c) => /^sb-[a-z0-9]+-auth-token/.test(c));
+  log(`   sb-* auth cookies set: ${authCookies.length}`);
 
-  if (!cookieJar) {
-    log("   form POST didn't set auth cookies directly. Falling back to programmatic admin+password to prove the runtime works.");
-  } else {
-    log(`   captured auth cookies (${cookieJar.length} chars)`);
-    const meRes = await fetch(`${URL_BASE}/auth/v1/user`, {
-      headers: { apikey: ANON_KEY, Cookie: cookieJar },
-    });
-    if (meRes.ok) {
-      pass(`session cookie validates against Supabase /auth/v1/user`);
-    } else {
-      fail(`session cookie didn't validate: ${meRes.status}`);
-    }
+  // 3) Confirm the redirect lands on `/`, indicating successful sign-in.
+  const loc = post.headers.get("location") ?? "";
+  if (post.status === 303 && loc === "/") {
+    pass("form redirected to / (sign-in successful)");
+  } else if (post.status === 303 && loc.startsWith("/sign-in")) {
+    fail(`form bounced back to /sign-in with: ${loc}`);
   }
 
-  // Either way, verify the user exists in auth.users (admin lookup):
+  // 4) Verify the user actually exists in auth.users.
   const { data: list } = await adminClient.auth.admin.listUsers({ perPage: 200 });
   const created = list.users.find((u) => u.email === email);
   if (created) {
-    pass(`password account was created in auth.users (${created.id.slice(0, 8)}…)`);
+    pass(`auth.users row created (${created.id.slice(0, 8)}…)`);
+
+    // 5) Use the cookie to call /api/scan as the same user — proves the
+    //    session cookie is real and unblocks every gated route.
+    if (authCookies.length) {
+      const jar = authCookies.join("; ");
+      const buf = await (await import("sharp")).default({
+        create: { width: 200, height: 200, channels: 3, background: { r: 200, g: 160, b: 110 } },
+      }).jpeg({ quality: 80 }).toBuffer();
+      const res = await fetch(`${SITE_URL}/api/scan`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Cookie: jar },
+        body: JSON.stringify({
+          imageDataUrl: `data:image/jpeg;base64,${buf.toString("base64")}`,
+        }),
+      });
+      if (res.status === 200) {
+        pass("authed /api/scan succeeded with cookie minted by the form");
+      } else {
+        const body = await res.text();
+        fail(`authed /api/scan failed (${res.status}): ${body.slice(0, 200)}`);
+      }
+    } else {
+      fail("no auth cookies minted by the form — session won't persist");
+    }
+
     await adminClient.auth.admin.deleteUser(created.id);
-    log(`   cleaned up`);
+    log(`   cleaned up test user`);
   } else {
-    fail(`password account NOT in auth.users — form POST didn't actually create the user`);
+    fail("auth.users row NOT created — server action didn't run");
   }
 }
 
