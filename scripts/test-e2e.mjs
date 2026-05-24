@@ -101,12 +101,18 @@ async function getAccessTokenFor({ email, password }) {
 // 3. Call /api/scan with a synthetic image
 // ────────────────────────────────────────────────────────────────────────
 async function testScanRoute(session) {
-  log("== test 2: /api/scan with a 1x1 jpg as authed user ==");
-  // Smallest valid baseline-JPEG body we can fit in a string literal.
-  // Claude vision can still see it (1×1 white). The scan should classify
-  // the result as "uncertain" (predictedLevel null) with low confidence.
-  const tinyJpegBase64 =
-    "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDAREAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQBAQAAAAAAAAAAAAAAAAAAAAj/2gAMAwEAAhADEAAAAY/g/9k=";
+  log("== test 2: /api/scan with a synthetic 200×200 JPEG as authed user ==");
+  // Build a small but legibly-sized JPEG via sharp. The colour is
+  // deliberately food-like (warm brown) so the model has something to
+  // describe; we just need a non-trivial image, not a real meal photo.
+  const { default: sharp } = await import("sharp");
+  const buf = await sharp({
+    create: { width: 200, height: 200, channels: 3, background: { r: 168, g: 124, b: 74 } },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  const tinyJpegBase64 = buf.toString("base64");
+  log(`   synthetic JPEG: ${buf.length} bytes, ${tinyJpegBase64.length} base64 chars`);
 
   const cookieJar = `sb-${URL_BASE.match(/^https?:\/\/([a-z0-9]+)\./)[1]}-auth-token=${encodeURIComponent(
     JSON.stringify({
@@ -149,6 +155,67 @@ async function testScanRoute(session) {
 }
 
 // ────────────────────────────────────────────────────────────────────────
+// 4. /api/chat — streaming Anthropic response with cached system prompt
+// ────────────────────────────────────────────────────────────────────────
+async function testChatRoute() {
+  log("== test 3: /api/chat streaming (anonymous OK) ==");
+  const res = await fetch(`${SITE_URL}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [
+        { id: "1", role: "user", content: "In one sentence, what is dysphagia?" },
+      ],
+      mode: "coach",
+    }),
+  });
+  if (res.status !== 200) {
+    fail(`/api/chat returned ${res.status}: ${(await res.text()).slice(0, 200)}`);
+    return;
+  }
+  // Read the AI-SDK data-stream and capture text chunks.
+  const reader = res.body.getReader();
+  let buf = "";
+  const decoder = new TextDecoder();
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    if (buf.length > 600) break; // we just want the first sentence
+  }
+  // AI SDK streams in `0:"..."` lines for text deltas.
+  const text = [...buf.matchAll(/0:"((?:\\.|[^"\\])*)"/g)]
+    .map((m) => m[1].replace(/\\n/g, " ").replace(/\\"/g, '"'))
+    .join("");
+  if (text.length > 10) {
+    pass(`/api/chat streamed: "${text.slice(0, 110).trim()}…"`);
+  } else {
+    fail(`/api/chat streamed nothing parseable; raw=${buf.slice(0, 200)}`);
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// 5. Red-flag detector unit smoke (defence-in-depth client logic)
+// ────────────────────────────────────────────────────────────────────────
+async function testRedFlagDetector() {
+  log("== test 4: client-side red-flag detector ==");
+  const { detectRedFlag } = await import("../lib/domain/red-flags.js")
+    .catch(async () => await import("../lib/domain/red-flags.ts"))
+    .catch(() => null);
+  if (!detectRedFlag) {
+    log("   skipping — couldn't import the TS source from a JS test");
+    return;
+  }
+  const emergency = detectRedFlag("I'm choking right now");
+  const ok = detectRedFlag("Lovely lunch today");
+  if (emergency?.severity === "emergency" && ok === null) {
+    pass("red-flag detector correctly emergency/null");
+  } else {
+    fail(`red-flag detector unexpected: emergency=${JSON.stringify(emergency)} ok=${ok}`);
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────
 // run
 // ────────────────────────────────────────────────────────────────────────
 (async () => {
@@ -165,6 +232,7 @@ async function testScanRoute(session) {
     pass("got session access_token");
 
     await testScanRoute(session);
+    await testChatRoute();
 
     log("== cleanup ==");
     await adminClient.auth.admin.deleteUser(user.id);
