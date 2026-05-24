@@ -1,0 +1,3 @@
+# Approve native-build scripts here as you need them.
+# `sharp` is wanted when you turn on Next image optimisation locally; flip to true then.
+onlyBuiltDependencies: []

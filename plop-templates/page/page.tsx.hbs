@@ -1,0 +1,23 @@
+import { PageHeader } from "@/components/layout";
+import { Card } from "@/components/ui/card";
+
+export const metadata = {
+  title: "{{title}}",
+};
+
+export default function {{pascal route}}Page() {
+  return (
+    <main className="flex-1 px-5">
+      <PageHeader
+        eyebrow="Section"
+        title="{{title}}"
+        subtitle="TODO — one sentence of context."
+      />
+      <Card className="p-6">
+        <p className="text-sm leading-relaxed text-[var(--color-ink-soft)]">
+          Replace me.
+        </p>
+      </Card>
+    </main>
+  );
+}
