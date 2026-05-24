@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: models.default,
     messages: [...prefix, ...convertToCoreMessages(messages)],
-    temperature: 0.4,
+    // No temperature override — Claude Opus 4.7 rejects explicit temperature.
     maxTokens: 700,
   });
 

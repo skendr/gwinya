@@ -99,7 +99,9 @@ export async function POST(req: Request) {
       model: models.default,
       schema: ScanResult,
       messages,
-      temperature: 0.1,
+      // No temperature override — Claude Opus 4.7 rejects an explicit
+      // temperature param. Default (1.0) is fine for structured output
+      // because the Zod schema constrains the response shape.
     });
   } catch (err) {
     console.error("[scan] model call failed", err);
