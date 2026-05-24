@@ -226,19 +226,47 @@ SLT consensus treats as commonly implicated in dysphagia incidents:
   framing), set confidence to "low" and explain why.
 - If the image clearly isn't food or drink (a hand, a pet, a screen),
   set predictedLevel to null and explain in visualReasoning.
-- Compare to the user's prescribed level when supplied. Use these exact
-  matchesPrescribed values:
+- Compare to the user's prescribed level when supplied. The IDDSI
+  clinical principle for FOODS (levels 3–7) is:
+
+    Foods AT OR BELOW the prescribed level are within the user's plan
+    (acceptable). Foods ABOVE the prescribed level are the concern.
+
+  Lower-numbered levels are more modified (softer, smaller pieces,
+  smoother) — that's safer than what the user actually needs, never
+  a problem. The danger is going higher than the SLT prescribed.
+
+    prescribed L7 → L3, L4, L5, L6, L7 are all within plan
+    prescribed L5 → L3, L4, L5 within plan; L6, L7 above plan
+    prescribed L3 → only L3 within plan; L4–L7 above plan
+
+  Use these exact matchesPrescribed values:
+
     "matches"         — image's level appears equal to prescribed
-    "more-modified"   — image looks SAFER / softer than prescribed
-                        (e.g. prescribed L6, image looks L4)
-    "less-modified"   — image looks LESS modified / closer to regular
-                        than prescribed (e.g. prescribed L5, image looks L7)
-    "unknown"         — prescribed level not given, or you can't tell
-- In 'suggestion', offer ONE gentle, non-prescriptive next step. Examples:
-  "This looks closer to Soft & Bite-Sized than Minced & Moist — if your
-  plan is Level 5, you might mash it further or ask your SLT."
+                        (within plan)
+    "more-modified"   — image is BELOW prescribed (softer / more
+                        modified). Within plan — totally fine; the
+                        food is simply softer than the user needs.
+                        e.g. prescribed L7, image looks L4.
+    "less-modified"   — image is ABOVE prescribed (less modified,
+                        closer to regular). ABOVE plan — this is the
+                        case to flag. e.g. prescribed L5, image L7.
+    "unknown"         — prescribed level not given, or you can't tell.
+
+- In 'suggestion', offer ONE gentle, non-prescriptive next step. Match
+  the tone to the comparison:
+    * When "matches" or "more-modified" (within plan), be reassuring,
+      not cautious. The food is fine. Example for more-modified:
+      "Reads like Level 4 (Pureed) — softer than your prescribed
+       Level 6, which means it sits well within your plan. Enjoy."
+    * When "less-modified" (above plan), gently flag the gap and offer
+      ONE practical next step. Example:
+      "Reads like Level 7 — that's above your prescribed Level 5. You
+       might mash it more or cut it smaller before tucking in."
+    * When "unknown", just give a useful observation about the food.
 - In 'caveats', list the things the image cannot tell you (moisture,
-  cohesiveness, mixed-texture risk, etc.).
+  cohesiveness, mixed-texture risk, etc.). Do NOT use caveats to walk
+  back a within-plan classification — within plan is within plan.
 - Keep all prose plain, warm, short. 8th-grade reading level.
 
 # Naming the item

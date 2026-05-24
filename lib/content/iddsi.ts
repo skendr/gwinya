@@ -136,3 +136,59 @@ export const visualRedFlags = [
 ] as const;
 
 export type VisualRedFlagId = (typeof visualRedFlags)[number]["id"];
+
+/* ----------------------------------------------------------------------- */
+/* Plan-relationship helpers                                               */
+/* ----------------------------------------------------------------------- */
+
+/**
+ * IDDSI clinical principle for FOODS (levels 3–7).
+ *
+ * Someone prescribed level N can safely eat any food at level N or
+ * lower — lower-numbered levels are more modified (softer, smaller
+ * pieces, smoother), which is safer than what the user actually needs.
+ * The concern is foods ABOVE the prescribed level: less modified than
+ * the SLT said is safe.
+ *
+ *   prescribed L7 → L3, L4, L5, L6, L7 all within plan
+ *   prescribed L5 → L3, L4, L5 within plan; L6, L7 above plan
+ *   prescribed L3 → only L3 within plan; L4–L7 above plan
+ *
+ * Returns null when either level is missing, so the UI can decide
+ * between "no plan on file" and "above plan" rather than forcing a
+ * default that lies about safety.
+ *
+ * NOTE — drinks invert this. Prescribed L2 (mildly thick) means "L2 or
+ * THICKER" is safe; thinner is the concern. The food scanner only
+ * compares against textureLevel today, so this helper is food-axis
+ * specific. Add isDrinkWithinPlan when the scanner learns to detect
+ * drinks and compare against fluidLevel.
+ */
+export function isFoodWithinPlan(
+  predicted: number | null,
+  prescribed: number | null,
+): boolean | null {
+  if (predicted == null || prescribed == null) return null;
+  return predicted <= prescribed;
+}
+
+/**
+ * Resolve the model's matchesPrescribed enum into a clinical category
+ * the UI can act on:
+ *   "within-plan"  — at or below prescribed (matches + more-modified)
+ *   "above-plan"   — above prescribed (less-modified)
+ *   "unknown"      — model couldn't tell, or no plan on file
+ *
+ * Keeps the model's three-value enum (matches/more-modified/less-modified)
+ * intact in the DB and in the schema so we don't lose the precision of
+ * "exactly at vs softer than" — this just collapses it for display.
+ */
+export type PlanRelationship = "within-plan" | "above-plan" | "unknown";
+
+export function planRelationship(
+  matches: "matches" | "more-modified" | "less-modified" | "unknown" | null,
+): PlanRelationship {
+  if (matches === "matches" || matches === "more-modified") return "within-plan";
+  if (matches === "less-modified") return "above-plan";
+  return "unknown";
+}

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth/server";
 import { getLogs, getStreak, getRecentScans } from "@/lib/storage/actions";
 import { isoDay, daysBetween, relativeDay } from "@/lib/format/dates";
-import type { IddsiLevel } from "@/lib/content/iddsi";
+import { planRelationship, type IddsiLevel } from "@/lib/content/iddsi";
 
 export const metadata = { title: "Progress" };
 
@@ -63,9 +63,16 @@ export default async function ProgressPage() {
   const daysSince = lastCheckIn ? daysBetween(lastCheckIn, today) : null;
   const checkInDays = logs.map((l) => l.date);
   const { confidence, coughingFlags, fatigue } = aggregateLast14(logs);
-  // Match rate is computed from saved meals — drafts shouldn't dilute it.
-  const matchCount = meals.filter((m) => m.matchesPrescribed === "matches").length;
-  const matchRate = meals.length ? Math.round((matchCount / meals.length) * 100) : null;
+  // Within-plan rate computed from saved meals. The IDDSI rule
+  // ("at or below the prescribed level is fine") lives in
+  // lib/content/iddsi.ts:planRelationship — using the helper here so
+  // any future enum tweaks only have to be made in one place.
+  const relationships = meals.map((m) => planRelationship(m.matchesPrescribed));
+  const comparableMeals = relationships.filter((r) => r !== "unknown").length;
+  const withinPlanCount = relationships.filter((r) => r === "within-plan").length;
+  const withinPlanRate = comparableMeals
+    ? Math.round((withinPlanCount / comparableMeals) * 100)
+    : null;
 
   // Strategy adherence over the last 7 logged days. We count distinct
   // days the user ticked "used a strategy" — not raw log rows — so a
@@ -164,9 +171,9 @@ export default async function ProgressPage() {
           eyebrow="Food scans"
           title="Recent meals"
           trailing={
-            matchRate != null ? (
-              <Badge tone={matchRate >= 70 ? "teal" : matchRate >= 40 ? "gold" : "coral"}>
-                {matchRate}% match
+            withinPlanRate != null ? (
+              <Badge tone={withinPlanRate >= 90 ? "teal" : withinPlanRate >= 70 ? "gold" : "coral"}>
+                {withinPlanRate}% within plan
               </Badge>
             ) : null
           }
@@ -198,16 +205,21 @@ export default async function ProgressPage() {
                       </div>
                       <Badge
                         tone={
-                          m.matchesPrescribed === "matches"
+                          m.matchesPrescribed === "matches" ||
+                          m.matchesPrescribed === "more-modified"
                             ? "teal"
                             : m.matchesPrescribed === "less-modified"
                               ? "coral"
-                              : m.matchesPrescribed === "more-modified"
-                                ? "gold"
-                                : "cream"
+                              : "cream"
                         }
                       >
-                        {m.matchesPrescribed === "matches" ? "match" : m.matchesPrescribed}
+                        {m.matchesPrescribed === "matches"
+                          ? "within plan"
+                          : m.matchesPrescribed === "more-modified"
+                            ? "within plan (softer)"
+                            : m.matchesPrescribed === "less-modified"
+                              ? "above plan"
+                              : "no plan"}
                       </Badge>
                     </Card>
                   </li>

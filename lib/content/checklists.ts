@@ -19,7 +19,8 @@ export const beforeMeal: Checklist = {
     },
     {
       id: "texture",
-      prompt: "My food and drink match my recommended texture",
+      prompt: "My food is within my recommended texture",
+      helper: "Softer than your prescribed level is also fine — the concern is anything less modified than your plan.",
     },
     {
       id: "strategies",

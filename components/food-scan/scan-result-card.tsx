@@ -19,25 +19,29 @@ function describeMatch(
   prescribed: number | null,
   predicted: number | null,
 ): MatchTone | null {
+  // Within-plan is the clinical truth for matches OR more-modified:
+  // foods at or below the prescribed IDDSI level are all acceptable.
+  // Above-plan (less-modified) is the case that needs care. See
+  // lib/content/iddsi.ts:planRelationship for the rule.
   if (match === "unknown" || prescribed == null || predicted == null) return null;
   if (match === "matches") {
     return {
       badge: "teal",
-      label: "Looks like a match",
-      blurb: `Your SLT prescribed Level ${prescribed}, and this image looks similar.`,
+      label: "Right at your plan",
+      blurb: `Your SLT prescribed Level ${prescribed}, and this image looks the same.`,
     };
   }
   if (match === "more-modified") {
     return {
-      badge: "gold",
-      label: "Looks softer than prescribed",
-      blurb: `Image reads like Level ${predicted} — softer than your prescribed Level ${prescribed}. Usually fine but worth checking.`,
+      badge: "teal",
+      label: "Within your plan",
+      blurb: `Reads like Level ${predicted} — softer than your prescribed Level ${prescribed}. Foods at or below your plan are all within it, so this is fine.`,
     };
   }
   return {
     badge: "coral",
-    label: "Looks less modified than prescribed",
-    blurb: `Image reads like Level ${predicted} — less modified than your prescribed Level ${prescribed}. Take a moment before tucking in.`,
+    label: "Above your prescribed level",
+    blurb: `Reads like Level ${predicted} — that's above your prescribed Level ${prescribed}. Take a moment before tucking in; you might mash it more or cut it smaller first.`,
   };
 }
 

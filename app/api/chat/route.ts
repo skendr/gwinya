@@ -30,8 +30,21 @@ const SYSTEM_PROMPTS: Record<ChatMode, string> = {
  */
 function renderPlanContext(plan: NonNullable<Awaited<ReturnType<typeof loadPlan>>>): string {
   const lines: string[] = ["This user has uploaded a Speech and Language Therapy plan."];
-  if (plan.textureLevel != null) lines.push(`Prescribed food (IDDSI texture): Level ${plan.textureLevel}.`);
-  if (plan.fluidLevel != null) lines.push(`Prescribed drinks (IDDSI fluid): Level ${plan.fluidLevel}.`);
+  if (plan.textureLevel != null) {
+    lines.push(
+      `Prescribed food (IDDSI texture): Level ${plan.textureLevel}. ` +
+        `Per the IDDSI clinical principle, FOODS AT OR BELOW Level ${plan.textureLevel} ` +
+        `are all within this user's plan. Foods ABOVE Level ${plan.textureLevel} ` +
+        `(closer to regular) are the case to flag.`,
+    );
+  }
+  if (plan.fluidLevel != null) {
+    lines.push(
+      `Prescribed drinks (IDDSI fluid): Level ${plan.fluidLevel}. ` +
+        `For DRINKS the relationship inverts: drinks AT OR THICKER than ` +
+        `Level ${plan.fluidLevel} are within plan; thinner drinks are the concern.`,
+    );
+  }
   if (plan.posture) lines.push(`Posture: ${plan.posture}.`);
   if (plan.strategies?.length) {
     lines.push(`Strategies the SLT prescribed:\n- ${plan.strategies.join("\n- ")}`);
