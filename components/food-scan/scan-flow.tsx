@@ -8,7 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { CameraCapture } from "./camera-capture";
 import { ScanResultCard } from "./scan-result-card";
+import { SaveMealCard } from "./save-meal-card";
 import type { ScanResult } from "@/lib/ai/scan-schema";
+
+type ScanResponse = {
+  id: string | null;
+  analysis: ScanResult;
+  prescribed: number | null;
+};
 
 type Phase = "idle" | "ready" | "scanning" | "done";
 
@@ -16,7 +23,7 @@ export function ScanFlow() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [note, setNote] = useState("");
-  const [result, setResult] = useState<{ analysis: ScanResult; prescribed: number | null } | null>(null);
+  const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
@@ -41,10 +48,10 @@ export function ScanFlow() {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
         throw new Error(data.error ?? `Scan failed (${res.status})`);
       }
-      const data = (await res.json()) as { analysis: ScanResult; prescribed: number | null };
+      const data = (await res.json()) as ScanResponse;
       setResult(data);
       setPhase("done");
-      toast.success("Scan analysed", { description: "Saved to your history." });
+      toast.success("Scan analysed", { description: "Save it as a meal below if you'd like." });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
       setError(msg);
@@ -129,7 +136,15 @@ export function ScanFlow() {
       ) : null}
 
       {phase === "done" && result ? (
-        <ScanResultCard result={result.analysis} prescribed={result.prescribed} />
+        <>
+          <ScanResultCard result={result.analysis} prescribed={result.prescribed} />
+          {result.id ? (
+            <SaveMealCard
+              scanId={result.id}
+              suggestedName={result.analysis.suggestedItemName}
+            />
+          ) : null}
+        </>
       ) : null}
     </div>
   );

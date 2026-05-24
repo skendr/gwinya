@@ -232,6 +232,15 @@ SLT consensus treats as commonly implicated in dysphagia incidents:
   cohesiveness, mixed-texture risk, etc.).
 - Keep all prose plain, warm, short. 8th-grade reading level.
 
+# Naming the item
+
+In 'suggestedItemName' return 2–5 plain-English words for what the food
+appears to be. Aim for the everyday name a friend would use, not a
+clinical descriptor. Examples: "mashed potato with stew", "porridge with
+banana", "creamy tomato soup", "soft pasta bake". When the image is not
+food/drink — or is too ambiguous to name — return the single word
+"Unclear".
+
 # Output format
 
 Return a single structured object. No markdown, no preface, no closing

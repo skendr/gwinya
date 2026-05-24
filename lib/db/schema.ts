@@ -175,11 +175,20 @@ export const foodScans = pgTable(
     confidence: text("confidence"), // low | medium | high
     prescribedLevelAtScan: integer("prescribed_level_at_scan"),
     userNote: text("user_note"),
+    /** AI's guess at what the food is. Drives the default meal_name. */
+    suggestedItemName: text("suggested_item_name"),
+    /** User-confirmed item name; editable on save. */
+    mealName: text("meal_name"),
+    /** True once the user has hit "Save meal" on this scan. Scans default to draft. */
+    saved: boolean("saved").default(false).notNull(),
+    /** Separable from created_at so the user can back-date a meal. */
+    eatenAt: timestamp("eaten_at", { withTimezone: true }),
     modelId: text("model_id").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     userCreatedIdx: index("food_scans_user_created_idx").on(t.userId, t.createdAt),
+    userSavedIdx: index("food_scans_user_saved_idx").on(t.userId, t.saved, t.eatenAt),
     predictedRange: check(
       "food_scans_predicted_range",
       sql`${t.predictedLevel} is null or (${t.predictedLevel} between 0 and 7)`,

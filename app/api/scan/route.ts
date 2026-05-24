@@ -144,6 +144,10 @@ export async function POST(req: Request) {
     suggestion: analysis.suggestion,
     confidence: analysis.confidence,
     prescribedLevelAtScan: prescribed,
+    suggestedItemName: analysis.suggestedItemName,
+    // Pre-fill meal_name with the AI's guess. The user can edit and hit
+    // "Save meal" to flip saved=true; until then the row is a draft scan.
+    mealName: analysis.suggestedItemName,
     modelId: MODEL_IDS.default,
   });
 

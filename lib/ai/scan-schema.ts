@@ -9,6 +9,14 @@ import { z } from "zod";
  * foodScans table so we can persist directly without translation.
  */
 export const ScanResult = z.object({
+  suggestedItemName: z
+    .string()
+    .describe(
+      "Best guess at what the food item is, in 2–5 plain-English words. " +
+        "Examples: 'mashed potato with stew', 'porridge with banana', " +
+        "'creamy tomato soup', 'soft pasta bake'. Use 'Unclear' when the " +
+        "image is not food/drink.",
+    ),
   predictedLevel: z
     .union([z.number().int().min(0).max(7), z.null()])
     .describe(
