@@ -1,16 +1,19 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
+import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import type { Checklist } from "@/lib/domain/types";
 import { ReadinessItem } from "./readiness-item";
 import { CheckCircle2 } from "lucide-react";
+import { recordCheckIn } from "@/lib/storage/actions";
 
 export function ReadinessChecklist({ checklist }: { checklist: Checklist }) {
   const [state, setState] = useState<Record<string, boolean>>({});
+  const [recorded, setRecorded] = useState(false);
 
   const checked = useMemo(
     () => checklist.items.filter((i) => state[i.id]).length,
@@ -19,6 +22,19 @@ export function ReadinessChecklist({ checklist }: { checklist: Checklist }) {
   const total = checklist.items.length;
   const progress = total === 0 ? 0 : Math.round((checked / total) * 100);
   const complete = checked === total;
+
+  // Record a streak check-in the first time the user completes a session.
+  // Best-effort — failures are silent (likely "not signed in" for anonymous
+  // browsing, which is allowed for the pre-meal check).
+  useEffect(() => {
+    if (!complete || recorded) return;
+    setRecorded(true);
+    recordCheckIn()
+      .then(({ count }) => {
+        if (count > 0) toast.success("Check-in saved", { description: `${count}-day streak` });
+      })
+      .catch(() => {});
+  }, [complete, recorded]);
 
   return (
     <section className="space-y-4">

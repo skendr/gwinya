@@ -2,5 +2,6 @@
 # - sharp: Next.js image optimisation binary
 # - unrs-resolver: Rust-native resolver used by oxc/Turbopack
 allowBuilds:
+  esbuild: true
   sharp: true
   unrs-resolver: true

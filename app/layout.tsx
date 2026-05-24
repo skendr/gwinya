@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Instrument_Sans, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Toaster } from "sonner";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { FloatingScanButton } from "@/components/layout/floating-scan-button";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -53,7 +55,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="mx-auto flex min-h-dvh w-full max-w-[28rem] flex-col pb-[5.5rem]">
           {children}
         </div>
+        <FloatingScanButton />
         <BottomNav />
+        <Toaster
+          position="top-center"
+          richColors
+          toastOptions={{
+            className: "!font-sans !rounded-2xl",
+          }}
+        />
         <Analytics />
         <SpeedInsights />
       </body>

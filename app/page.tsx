@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Sparkles, ClipboardCheck } from "lucide-react";
+import { ArrowRight, Sparkles, ClipboardCheck, LogIn } from "lucide-react";
 import {
   PageHeader,
   SectionHeading,
@@ -11,14 +11,19 @@ import { LessonCard } from "@/components/lesson-card";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { lessons } from "@/lib/content/lessons";
+import { getUser } from "@/lib/auth/server";
+import { getStreak } from "@/lib/storage/actions";
 
-export default function HomePage() {
+export default async function HomePage() {
   const today = new Date().toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
   const nextLesson = lessons[0];
+
+  const user = await getUser();
+  const { count: streakCount } = user ? await getStreak() : { count: 0 };
 
   return (
     <main className="flex-1 px-5">
@@ -37,15 +42,16 @@ export default function HomePage() {
                 </span>
               </>
             }
-            subtitle="A small check-in builds the habit. Tap when you're ready."
-            right={<StreakPill days={3} />}
+            subtitle={
+              user
+                ? "A small check-in builds the habit. Tap when you're ready."
+                : "Anonymous browsing is fine. Sign in to save your streak and scans."
+            }
+            right={user ? <StreakPill days={streakCount} /> : null}
           />
         </RevealItem>
 
         <RevealItem>
-          {/* Daily check-in card — the hero. Asymmetric clay wash bleeds in
-              from the top-right corner; a tiny "Day 47" date stamp anchors
-              the journal feel. */}
           <Card className="relative mt-2 overflow-hidden p-6">
             <div
               aria-hidden
@@ -59,7 +65,7 @@ export default function HomePage() {
               aria-hidden
               className="num absolute right-4 top-4 rotate-3 rounded-md border border-[var(--color-clay)]/40 px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.2em] text-[var(--color-clay-deep)]/80"
             >
-              day · 47
+              day · {streakCount > 0 ? String(streakCount).padStart(2, "0") : "—"}
             </span>
             <div className="relative space-y-4 pt-6">
               <p className="font-display text-[1.65rem] font-semibold leading-[1.1] tracking-tight text-balance text-[var(--color-ink)]">
@@ -78,6 +84,25 @@ export default function HomePage() {
             </div>
           </Card>
         </RevealItem>
+
+        {!user ? (
+          <RevealItem>
+            <Card className="mt-4 flex items-center justify-between gap-3 p-4">
+              <div className="space-y-0.5">
+                <p className="font-semibold text-[var(--color-ink)]">Save your progress</p>
+                <p className="text-xs text-[var(--color-ink-soft)]">
+                  Email magic link — no password.
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/sign-in">
+                  <LogIn className="h-4 w-4" />
+                  Sign in
+                </Link>
+              </Button>
+            </Card>
+          </RevealItem>
+        ) : null}
 
         <RevealItem>
           <div className="mt-10 space-y-4">
