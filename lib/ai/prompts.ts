@@ -229,56 +229,53 @@ SLT consensus treats as commonly implicated in dysphagia incidents:
 - Compare to the user's prescribed level when supplied. The IDDSI
   clinical principle for FOODS (levels 3–7) is:
 
-    Foods more modified than (or equal to) the prescribed level are
-    within the user's plan. Foods less modified than prescribed are
-    the concern.
+    A meal is WITHIN PLAN when its IDDSI level is the same as the
+    user's prescribed level, OR more modified than it. A meal is
+    OUTSIDE PLAN when it is less modified than prescribed.
 
   In raw IDDSI numbers: lower-numbered levels are more modified
   (softer, smaller pieces, smoother) — that's safer than what the
   user actually needs. The danger is going higher than prescribed.
 
-    prescribed L7 → L3–L7 all within plan
-    prescribed L5 → L3, L4, L5 within plan; L6, L7 outside plan
-    prescribed L3 → only L3 within plan; L4–L7 outside plan
+    prescribed L7 → L3–L7 are all WITHIN plan
+    prescribed L5 → L3, L4, L5 within plan; L6, L7 OUTSIDE plan
+    prescribed L3 → only L3 within plan; L4–L7 OUTSIDE plan
 
-  USER-FACING VOCABULARY (use these phrases in 'suggestion'):
+  USER-FACING VOCABULARY — use these phrases in 'suggestion':
 
-    "above plan"  — more modified than prescribed. Colloquially
-                    "exceeds the plan's requirements" — the meal is
-                    SAFER than the user actually needs. WITHIN plan.
-                    (Note this is "above" in everyday English, not in
-                    IDDSI numbers — L4 for an L6 user is "above plan".)
-    "at plan"     — exactly the prescribed level. Within plan, sitting
-                    right at the threshold the SLT set.
-    "below plan"  — less modified than prescribed. OUTSIDE plan; the
-                    case to flag.
+    "within plan"   — the meal is at or more modified than prescribed.
+                      Includes the case of exactly matching (the
+                      target the SLT set) AND the case of being
+                      softer than needed (more cautious than required).
+    "outside plan"  — the meal is less modified than prescribed.
+                      The case to flag.
 
   STRUCTURED ENUM (matchesPrescribed) — use these exact values:
 
     "matches"         — image's level appears equal to prescribed
-                        → "at plan" in user vocabulary, within plan
+                        → WITHIN plan (exactly at the SLT's target)
     "more-modified"   — image is more modified than prescribed
                         (softer; lower IDDSI number; e.g. prescribed
-                        L6, image L4) → "above plan", within plan
+                        L6, image L4) → WITHIN plan (softer than needed)
     "less-modified"   — image is less modified than prescribed (closer
                         to regular; higher IDDSI number; e.g. prescribed
-                        L5, image L7) → "below plan", outside plan
+                        L5, image L7) → OUTSIDE plan
     "unknown"         — prescribed level not given, or you can't tell.
 
 - In 'suggestion', offer ONE gentle, non-prescriptive next step using
-  the user-facing vocabulary above. Match the tone to the comparison:
-    * "more-modified" (above plan, within plan) — reassuring, not
-      cautious. Example: "Reads like Level 4 — softer than your
-      prescribed Level 6. That's above your plan (more modified than
-      you need), so it sits well within what's safe for you."
-    * "matches" (at plan, within plan) — affirmative, present-tense.
-      Example: "Reads like your prescribed Level 5. Right at your
-      plan; take your usual care and you're set."
-    * "less-modified" (below plan, outside plan) — gently flag and
-      offer ONE practical next step. Example: "Reads like Level 7 —
-      less modified than your prescribed Level 5. That's below your
-      plan (outside what your SLT said is safe). You might mash it
-      more or cut it smaller before tucking in."
+  the within/outside vocabulary. Always reference the prescribed level
+  number so the user sees what "their plan" is. Match the tone to the
+  comparison:
+    * "more-modified" (within plan, softer than needed) — reassuring,
+      not cautious. Example: "Your plan is Level 6. This reads like
+      Level 4 — softer than your plan needs, so it's within plan."
+    * "matches" (within plan, exactly at) — affirmative, present-tense.
+      Example: "Your plan is Level 5, and this looks like Level 5.
+      Right at your plan — within plan."
+    * "less-modified" (outside plan) — gently flag and offer ONE
+      practical next step. Example: "Your plan is Level 5. This reads
+      like Level 7 — less modified than your plan allows, so it's
+      outside plan. You might mash it more or cut it smaller first."
     * "unknown" — just give a useful observation about the food.
 - In 'caveats', list the things the image cannot tell you (moisture,
   cohesiveness, mixed-texture risk, etc.). Do NOT use caveats to walk

@@ -9,9 +9,8 @@ import type { ScanResult } from "@/lib/ai/scan-schema";
 import type { IddsiLevel } from "@/lib/content/iddsi";
 
 type MatchTone = {
-  /** teal = green (above plan, safer); gold = yellow (at plan, threshold);
-   *  rose = red (below plan, outside). */
-  badge: "teal" | "gold" | "rose" | "cream";
+  /** teal = green (within plan); rose = red (outside plan); cream = no plan. */
+  badge: "teal" | "rose" | "cream";
   label: string;
   blurb: string;
 };
@@ -21,30 +20,28 @@ function describeMatch(
   prescribed: number | null,
   predicted: number | null,
 ): MatchTone | null {
-  // Three states mapped to the user-facing "above / at / below plan"
-  // vocabulary. See lib/content/iddsi.ts:planComparison for the rule.
-  //   above plan (more-modified) → green, within plan
-  //   at plan    (matches)       → yellow, within plan (right at threshold)
-  //   below plan (less-modified) → red, outside plan
+  // Binary verdict: a meal is either within the user's plan (the SLT-
+  // prescribed IDDSI level, or anything more modified than it) or it is
+  // outside that plan. See lib/content/iddsi.ts:planVerdict.
   if (match === "unknown" || prescribed == null || predicted == null) return null;
   if (match === "more-modified") {
     return {
       badge: "teal",
-      label: "Above plan",
-      blurb: `Reads like Level ${predicted} — softer than your prescribed Level ${prescribed}. That's above your plan (more modified than you need), so it sits well within what's safe.`,
+      label: "Within plan",
+      blurb: `Your SLT prescribed Level ${prescribed}. This reads like Level ${predicted} — softer than the line your plan sets, so it's within plan.`,
     };
   }
   if (match === "matches") {
     return {
-      badge: "gold",
-      label: "At plan",
-      blurb: `Reads like Level ${prescribed} — exactly your prescribed level. Right at your plan, so it's within plan — just take your usual care.`,
+      badge: "teal",
+      label: "Within plan",
+      blurb: `Your SLT prescribed Level ${prescribed}, and this reads like Level ${prescribed}. Right at your plan — within plan.`,
     };
   }
   return {
     badge: "rose",
-    label: "Below plan",
-    blurb: `Reads like Level ${predicted} — less modified than your prescribed Level ${prescribed}. That's below your plan (outside what your SLT said is safe). You might mash it more or cut it smaller first.`,
+    label: "Outside plan",
+    blurb: `Your SLT prescribed Level ${prescribed}. This reads like Level ${predicted} — less modified than your plan allows, so it's outside plan. You might mash it more or cut it smaller before tucking in.`,
   };
 }
 
@@ -89,19 +86,15 @@ export function ScanResultCard({
               background:
                 match.badge === "teal"
                   ? "var(--color-moss-soft)"
-                  : match.badge === "gold"
-                    ? "var(--color-honey-soft)"
-                    : match.badge === "rose"
-                      ? "var(--color-rose-soft)"
-                      : "var(--color-linen-2)",
+                  : match.badge === "rose"
+                    ? "var(--color-rose-soft)"
+                    : "var(--color-linen-2)",
               color:
                 match.badge === "teal"
                   ? "var(--color-moss-deep)"
-                  : match.badge === "gold"
-                    ? "#7a5300"
-                    : match.badge === "rose"
-                      ? "#a23434"
-                      : "var(--color-ink)",
+                  : match.badge === "rose"
+                    ? "#a23434"
+                    : "var(--color-ink)",
             }}
           >
             <p className="text-sm font-semibold">{match.label}</p>

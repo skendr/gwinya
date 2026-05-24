@@ -37,13 +37,14 @@ export const ScanResult = z.object({
   matchesPrescribed: z
     .enum(["matches", "more-modified", "less-modified", "unknown"])
     .describe(
-      "Comparison vs the user's prescribed level. Foods AT OR BELOW the " +
-        "prescribed level are within plan; foods above it are the concern. " +
-        "'matches' = image level equals prescribed (within plan). " +
-        "'more-modified' = image is BELOW prescribed — softer than the user " +
-        "needs, fully within their plan. " +
-        "'less-modified' = image is ABOVE prescribed — closer to regular " +
-        "than the SLT prescribed; the case to flag. " +
+      "Comparison vs the user's prescribed level. The app shows this as " +
+        "the binary verdict WITHIN PLAN or OUTSIDE PLAN: " +
+        "'matches' = image level equals prescribed — within plan. " +
+        "'more-modified' = image is more modified than prescribed (softer, " +
+        "smaller pieces — lower IDDSI number) — within plan (softer than " +
+        "the user actually needs). " +
+        "'less-modified' = image is less modified than prescribed (closer " +
+        "to regular — higher IDDSI number) — outside plan; the case to flag. " +
         "'unknown' = no prescribed level provided, or you cannot tell.",
     ),
   caveats: z

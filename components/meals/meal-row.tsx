@@ -22,16 +22,16 @@ type Props = {
   imageUrl: string | null;
 };
 
-// Three-colour signal matching the user-facing vocabulary defined in
-// lib/content/iddsi.ts:planComparison:
-//   above plan (more-modified) → green/teal  → within plan
-//   at plan    (matches)       → yellow/gold → within plan (at threshold)
-//   below plan (less-modified) → red/rose    → outside plan
-const matchTone: Record<Match, { tone: "teal" | "gold" | "rose" | "cream"; label: string }> = {
-  "more-modified": { tone: "teal", label: "above plan" },
-  matches: { tone: "gold", label: "at plan" },
-  "less-modified": { tone: "rose", label: "below plan" },
-  unknown: { tone: "cream", label: "no plan" },
+// Binary verdict: a meal is either within the user's SLT-prescribed
+// plan (the prescribed IDDSI level, or anything more modified than
+// it) or outside that plan. See lib/content/iddsi.ts:isWithinPlan.
+// Foods more modified than prescribed are within plan because that's
+// always safer than what the SLT said is necessary.
+const matchTone: Record<Match, { tone: "teal" | "rose" | "cream"; label: string }> = {
+  "more-modified": { tone: "teal", label: "within plan" },
+  matches: { tone: "teal", label: "within plan" },
+  "less-modified": { tone: "rose", label: "outside plan" },
+  unknown: { tone: "cream", label: "no plan saved" },
 };
 
 /**

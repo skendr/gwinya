@@ -20,7 +20,7 @@ export const beforeMeal: Checklist = {
     {
       id: "texture",
       prompt: "My food is within my plan",
-      helper: "Above plan (softer than prescribed) is also within plan. Below plan (less modified than prescribed) is the case to take care with.",
+      helper: "Within plan means at your prescribed IDDSI level or softer. Less modified than your prescribed level is outside plan — worth a second look.",
     },
     {
       id: "strategies",

@@ -155,7 +155,7 @@ export type VisualRedFlagId = (typeof visualRedFlags)[number]["id"];
  *   prescribed L3 → only L3 within plan; L4–L7 above plan
  *
  * Returns null when either level is missing, so the UI can decide
- * between "no plan on file" and "above plan" rather than forcing a
+ * between "no plan on file" and "outside plan" rather than forcing a
  * default that lies about safety.
  *
  * NOTE — drinks invert this. Prescribed L2 (mildly thick) means "L2 or
@@ -173,44 +173,38 @@ export function isFoodWithinPlan(
 }
 
 /**
- * Resolve the model's matchesPrescribed enum into the user-facing
- * comparison vocabulary the UI uses for badges and copy.
+ * Resolve the model's matchesPrescribed enum into the binary
+ * verdict the UI shows: WITHIN plan or OUTSIDE plan (or UNKNOWN).
  *
- *   "above-plan" — more modified than the prescribed level (softer than
- *                  needed). NOTE: "above" here is the colloquial
- *                  "exceeded the plan's requirements" — clinically
- *                  SAFER. In raw IDDSI numbers this is a LOWER level
- *                  (L4 for an L6 user is "above plan").
- *   "at-plan"    — exactly at the prescribed level. Within plan but
- *                  right at the threshold the SLT set.
- *   "below-plan" — less modified than prescribed (closer to regular).
- *                  Outside of plan; the case to flag.
- *   "unknown"    — model couldn't tell, or no plan on file.
+ * The rule, in user-facing words: a food is within plan when its
+ * IDDSI level is at the user's prescribed level or more modified
+ * (softer / smaller pieces / smoother) than it. A food is outside
+ * plan when it is less modified than prescribed.
  *
- * Three colours flow from this: above=green, at=yellow, below=red.
- * The binary "within plan / outside plan" framing collapses it to
- * two states; see isWithinPlan below.
+ * In raw IDDSI numbers this means within-plan is a level equal to
+ * or LOWER than the prescribed number — counterintuitive because
+ * "lower number = safer" is an IDDSI quirk. The user-facing
+ * vocabulary deliberately avoids leaning on the numbers.
  *
- * Keeps the model's three-value enum (matches/more-modified/less-modified)
- * intact in the DB and the schema; this helper only renames it for the
- * user's mental model.
+ *   "within"  — matches OR more-modified
+ *   "outside" — less-modified
+ *   "unknown" — model couldn't tell, or no plan on file
+ *
+ * Keeps the model's three-value enum (matches/more-modified/
+ * less-modified) intact in the DB and the Zod schema; this helper
+ * only collapses it for display.
  */
-export type PlanComparison = "above-plan" | "at-plan" | "below-plan" | "unknown";
+export type PlanVerdict = "within" | "outside" | "unknown";
 
-export function planComparison(
+export function planVerdict(
   matches: "matches" | "more-modified" | "less-modified" | "unknown" | null,
-): PlanComparison {
-  if (matches === "more-modified") return "above-plan";
-  if (matches === "matches") return "at-plan";
-  if (matches === "less-modified") return "below-plan";
+): PlanVerdict {
+  if (matches === "matches" || matches === "more-modified") return "within";
+  if (matches === "less-modified") return "outside";
   return "unknown";
 }
 
-/**
- * "Within plan" = above OR at the prescribed level. The clinical truth:
- * foods more modified than prescribed (or exactly matching) are all
- * within the user's plan. Only below-plan is outside.
- */
-export function isWithinPlan(c: PlanComparison): boolean {
-  return c === "above-plan" || c === "at-plan";
+/** Convenience: does this comparison count toward the within-plan rate? */
+export function isWithinPlan(v: PlanVerdict): boolean {
+  return v === "within";
 }

@@ -33,25 +33,26 @@ function renderPlanContext(plan: NonNullable<Awaited<ReturnType<typeof loadPlan>
   if (plan.textureLevel != null) {
     lines.push(
       `Prescribed food (IDDSI texture): Level ${plan.textureLevel}.\n\n` +
-        `The app uses this user-facing vocabulary when comparing a meal to ` +
-        `the plan:\n` +
-        `  - "above plan" = MORE modified than Level ${plan.textureLevel} ` +
-        `(softer than required) → within plan, safe\n` +
-        `  - "at plan"    = exactly Level ${plan.textureLevel} → within plan ` +
-        `(at the threshold the SLT set)\n` +
-        `  - "below plan" = LESS modified than Level ${plan.textureLevel} ` +
-        `(closer to regular) → OUTSIDE plan, the case to flag\n\n` +
-        `In IDDSI numbers, "above plan" means a LOWER level number. Use the ` +
-        `"above / at / below plan" vocabulary in your replies so the user ` +
-        `recognises what they see in the app.`,
+        `The app frames every meal as WITHIN PLAN or OUTSIDE PLAN against ` +
+        `this prescription. A food is:\n` +
+        `  - WITHIN PLAN  if it is at Level ${plan.textureLevel} or MORE ` +
+        `modified than Level ${plan.textureLevel} (lower IDDSI number, ` +
+        `i.e. softer / smaller pieces / smoother). The clinical reason: ` +
+        `softer than the SLT prescribed is always safer than required.\n` +
+        `  - OUTSIDE PLAN if it is LESS modified than Level ${plan.textureLevel} ` +
+        `(higher IDDSI number, closer to regular food). This is the case ` +
+        `to flag.\n\n` +
+        `Use "within plan" / "outside plan" in your replies and reference ` +
+        `the prescribed level number (Level ${plan.textureLevel}) so the ` +
+        `user can connect what you say to their plan.`,
     );
   }
   if (plan.fluidLevel != null) {
     lines.push(
       `Prescribed drinks (IDDSI fluid): Level ${plan.fluidLevel}. For ` +
-        `drinks the safety direction flips: drinks at Level ${plan.fluidLevel} ` +
-        `or THICKER are within plan; thinner drinks are below plan ` +
-        `(outside plan, the case to flag).`,
+        `drinks the safety direction flips: a drink is within plan if it ` +
+        `is at Level ${plan.fluidLevel} or THICKER; thinner drinks are ` +
+        `outside plan.`,
     );
   }
   if (plan.posture) lines.push(`Posture: ${plan.posture}.`);

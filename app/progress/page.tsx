@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { getUser } from "@/lib/auth/server";
 import { getLogs, getStreak, getRecentScans } from "@/lib/storage/actions";
 import { isoDay, daysBetween, relativeDay } from "@/lib/format/dates";
-import { planComparison, isWithinPlan, type IddsiLevel } from "@/lib/content/iddsi";
+import { planVerdict, isWithinPlan, type IddsiLevel } from "@/lib/content/iddsi";
 
 export const metadata = { title: "Progress" };
 
@@ -63,13 +63,13 @@ export default async function ProgressPage() {
   const daysSince = lastCheckIn ? daysBetween(lastCheckIn, today) : null;
   const checkInDays = logs.map((l) => l.date);
   const { confidence, coughingFlags, fatigue } = aggregateLast14(logs);
-  // Within-plan rate from saved meals. The rule ("more modified than
-  // prescribed, or exactly at it, is within plan") lives in
-  // lib/content/iddsi.ts:planComparison + isWithinPlan — using both
+  // Within-plan rate from saved meals. The rule ("at prescribed level
+  // or more modified is within plan") lives in
+  // lib/content/iddsi.ts:planVerdict + isWithinPlan — using both
   // helpers so any future enum tweaks live in one place.
-  const comparisons = meals.map((m) => planComparison(m.matchesPrescribed));
-  const comparableMeals = comparisons.filter((c) => c !== "unknown").length;
-  const withinPlanCount = comparisons.filter(isWithinPlan).length;
+  const verdicts = meals.map((m) => planVerdict(m.matchesPrescribed));
+  const comparableMeals = verdicts.filter((v) => v !== "unknown").length;
+  const withinPlanCount = verdicts.filter(isWithinPlan).length;
   const withinPlanRate = comparableMeals
     ? Math.round((withinPlanCount / comparableMeals) * 100)
     : null;
@@ -172,7 +172,7 @@ export default async function ProgressPage() {
           title="Recent meals"
           trailing={
             withinPlanRate != null ? (
-              <Badge tone={withinPlanRate >= 90 ? "teal" : withinPlanRate >= 70 ? "gold" : "coral"}>
+              <Badge tone={withinPlanRate >= 80 ? "teal" : "rose"}>
                 {withinPlanRate}% within plan
               </Badge>
             ) : null
@@ -205,22 +205,20 @@ export default async function ProgressPage() {
                       </div>
                       <Badge
                         tone={
-                          m.matchesPrescribed === "more-modified"
+                          m.matchesPrescribed === "more-modified" ||
+                          m.matchesPrescribed === "matches"
                             ? "teal"
-                            : m.matchesPrescribed === "matches"
-                              ? "gold"
-                              : m.matchesPrescribed === "less-modified"
-                                ? "rose"
-                                : "cream"
+                            : m.matchesPrescribed === "less-modified"
+                              ? "rose"
+                              : "cream"
                         }
                       >
-                        {m.matchesPrescribed === "more-modified"
-                          ? "above plan"
-                          : m.matchesPrescribed === "matches"
-                            ? "at plan"
-                            : m.matchesPrescribed === "less-modified"
-                              ? "below plan"
-                              : "no plan"}
+                        {m.matchesPrescribed === "more-modified" ||
+                        m.matchesPrescribed === "matches"
+                          ? "within plan"
+                          : m.matchesPrescribed === "less-modified"
+                            ? "outside plan"
+                            : "no plan"}
                       </Badge>
                     </Card>
                   </li>
