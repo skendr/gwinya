@@ -40,24 +40,18 @@ export async function POST(req: NextRequest) {
 
     for (const file of files) {
       const content = readFileSync(join(migDir, file), "utf8");
-      const stmts = content
-        .split(/--> statement-breakpoint/)
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0 && !s.startsWith("--"));
 
-      for (const stmt of stmts) {
-        try {
-          await sql.unsafe(stmt);
-          results.push({ file, snippet: stmt.slice(0, 80).replace(/\s+/g, " "), ok: true });
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          results.push({
-            file,
-            snippet: stmt.slice(0, 80).replace(/\s+/g, " "),
-            ok: false,
-            error: msg,
-          });
-        }
+      // Strip Drizzle's per-statement breakpoint markers — they're not SQL.
+      // Then run the file as one multi-statement query so handwritten files
+      // (RLS, storage policies) work the same as Drizzle output.
+      const cleaned = content.replace(/-->\s*statement-breakpoint\s*\n?/g, "\n");
+
+      try {
+        await sql.unsafe(cleaned);
+        results.push({ file, snippet: `(${cleaned.length} chars)`, ok: true });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        results.push({ file, snippet: `(${cleaned.length} chars)`, ok: false, error: msg });
       }
     }
   } finally {
