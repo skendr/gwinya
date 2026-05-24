@@ -67,6 +67,18 @@ export default async function ProgressPage() {
   const matchCount = meals.filter((m) => m.matchesPrescribed === "matches").length;
   const matchRate = meals.length ? Math.round((matchCount / meals.length) * 100) : null;
 
+  // Strategy adherence over the last 7 logged days. We count distinct
+  // days the user ticked "used a strategy" — not raw log rows — so a
+  // user who logs twice in a day doesn't get double credit.
+  const last7 = new Set<string>();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    last7.add(d.toISOString().slice(0, 10));
+  }
+  const adherenceDays = logs.filter((l) => last7.has(l.date) && l.usedStrategy).length;
+  const adherencePct = Math.round((adherenceDays / 7) * 100);
+
   return (
     <main className="flex-1 space-y-6 px-5">
       <PageHeader
@@ -132,6 +144,20 @@ export default async function ProgressPage() {
           </Card>
         </div>
       </div>
+
+      <Card className="space-y-1 p-5">
+        <p className="text-[0.7rem] font-medium uppercase tracking-[0.18em] text-[var(--color-muted)]">
+          Strategy adherence
+        </p>
+        <p className="text-sm leading-relaxed text-[var(--color-ink)]">
+          You used a strategy on{" "}
+          <span className="font-display text-xl font-semibold text-[var(--color-clay-deep)]">
+            {adherenceDays}
+          </span>{" "}
+          of the last 7 days{" "}
+          <span className="text-[var(--color-muted)]">({adherencePct}%)</span>.
+        </p>
+      </Card>
 
       <div>
         <SectionHeading

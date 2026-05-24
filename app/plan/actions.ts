@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { clinicalPlan } from "@/lib/db/schema";
+import { clinicalPlan, clinicalPlanHistory } from "@/lib/db/schema";
 import { getUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EducationalLink } from "@/lib/db/schema";
@@ -77,6 +77,23 @@ export async function saveClinicalPlan(input: SaveClinicalPlanInput) {
   if (!user) throw new Error("unauthorised");
 
   const review = input.reviewDate?.match(/^\d{4}-\d{2}-\d{2}$/) ? input.reviewDate : null;
+
+  // Snapshot the existing row (if any) into the history table before we
+  // overwrite. The history insert and the upsert aren't transactional
+  // here — if the upsert fails afterwards, we'd be left with a snapshot
+  // that wasn't actually replaced. Acceptable for v1 audit purposes.
+  const [existing] = await db
+    .select()
+    .from(clinicalPlan)
+    .where(eq(clinicalPlan.userId, user.id))
+    .limit(1);
+
+  if (existing) {
+    await db.insert(clinicalPlanHistory).values({
+      userId: user.id,
+      snapshot: existing as unknown as Record<string, unknown>,
+    });
+  }
 
   await db
     .insert(clinicalPlan)

@@ -109,6 +109,28 @@ export const clinicalPlan = pgTable(
   }),
 );
 
+/**
+ * Plan history. Every save into `clinical_plan` first inserts a snapshot
+ * of the previous row here, keyed by user_id + an immutable timestamp.
+ * Lets the user (and us, in support) trace "your plan changed from L5
+ * to L7 on this date" without paying for full per-column auditing.
+ */
+export const clinicalPlanHistory = pgTable(
+  "clinical_plan_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull(),
+    snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+    replacedAt: timestamp("replaced_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    userReplacedIdx: index("clinical_plan_history_user_replaced_idx").on(
+      t.userId,
+      t.replacedAt,
+    ),
+  }),
+);
+
 /* ----------------------------------------------------------------------- */
 /* Streak                                                                  */
 /* ----------------------------------------------------------------------- */
@@ -224,6 +246,7 @@ export const foodScans = pgTable(
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 
+export type ClinicalPlanHistory = typeof clinicalPlanHistory.$inferSelect;
 export type ClinicalPlan = typeof clinicalPlan.$inferSelect;
 export type NewClinicalPlan = typeof clinicalPlan.$inferInsert;
 
