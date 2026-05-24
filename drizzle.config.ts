@@ -1,17 +1,19 @@
-import "dotenv/config";
+import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-const url =
-  process.env.POSTGRES_URL_NON_POOLING ??
-  process.env.POSTGRES_URL ??
-  process.env.DATABASE_URL;
+// Pull from .env.local first (where `vercel env pull` writes), then .env.
+config({ path: ".env.local" });
+config();
 
-if (!url) {
-  throw new Error(
-    "Set POSTGRES_URL_NON_POOLING (or POSTGRES_URL / DATABASE_URL) before running drizzle-kit. " +
-      "On Vercel + Supabase Marketplace this is auto-injected; locally run `vercel env pull`.",
-  );
-}
+// `drizzle-kit generate` runs offline and only needs a non-empty URL.
+// `drizzle-kit push` / `pull` actually open the connection — set the value
+// before running those commands (Vercel injects it on deploy; for local use
+// paste a direct-connection string from the Supabase dashboard).
+const url =
+  process.env.POSTGRES_URL_NON_POOLING ||
+  process.env.POSTGRES_URL ||
+  process.env.DATABASE_URL ||
+  "postgres://offline";
 
 export default defineConfig({
   schema: "./lib/db/schema.ts",
