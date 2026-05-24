@@ -47,13 +47,23 @@ function buildClient() {
   return drizzle(client, { schema });
 }
 
+// Module-level cache. Prod gets one client per cold start (serverless
+// container) and reuses it for every request the container handles.
+// Dev additionally reuses across HMR reloads via globalThis so the
+// connection survives `next dev` rebuilds.
+let _client: ReturnType<typeof drizzle<typeof schema>> | undefined;
+
 function ensure() {
-  if (globalThis.__gwinyaDb) return globalThis.__gwinyaDb;
-  const next = buildClient();
-  if (process.env.NODE_ENV !== "production") {
-    globalThis.__gwinyaDb = next;
+  if (_client) return _client;
+  if (process.env.NODE_ENV !== "production" && globalThis.__gwinyaDb) {
+    _client = globalThis.__gwinyaDb;
+    return _client;
   }
-  return next;
+  _client = buildClient();
+  if (process.env.NODE_ENV !== "production") {
+    globalThis.__gwinyaDb = _client;
+  }
+  return _client;
 }
 
 export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
