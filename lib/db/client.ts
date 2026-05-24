@@ -60,7 +60,9 @@ export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
   get(_target, prop, receiver) {
     const target = ensure();
     const value = Reflect.get(target as object, prop, receiver);
-    return typeof value === "function" ? (value as Function).bind(target) : value;
+    return typeof value === "function"
+      ? (value as (...args: unknown[]) => unknown).bind(target)
+      : value;
   },
   has(_target, prop) {
     return prop in (ensure() as object);
