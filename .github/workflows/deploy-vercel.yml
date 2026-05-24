@@ -38,10 +38,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # `vercel build` shells out to whatever package manager matches the
+      # repo's lockfile. pnpm-lock.yaml is present, so pnpm must be on
+      # PATH or the build crashes with `spawn pnpm ENOENT`.
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "pnpm"
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
