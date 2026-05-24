@@ -10,9 +10,11 @@ import { StreakPill } from "@/components/streak-pill";
 import { LessonCard } from "@/components/lesson-card";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TodaysStrategiesCard, NoPlanBanner } from "@/components/clinical-plan";
 import { lessons } from "@/lib/content/lessons";
 import { getUser } from "@/lib/auth/server";
 import { getStreak } from "@/lib/storage/actions";
+import { getClinicalPlan } from "@/app/plan/actions";
 
 export default async function HomePage() {
   const today = new Date().toLocaleDateString(undefined, {
@@ -23,7 +25,10 @@ export default async function HomePage() {
   const nextLesson = lessons[0];
 
   const user = await getUser();
-  const { count: streakCount } = user ? await getStreak() : { count: 0 };
+  const [{ count: streakCount }, plan] = user
+    ? await Promise.all([getStreak(), getClinicalPlan()])
+    : [{ count: 0 }, null];
+  const hasPlan = !!plan && plan.textureLevel != null;
 
   return (
     <main className="flex-1 px-5">
@@ -50,6 +55,18 @@ export default async function HomePage() {
             right={user ? <StreakPill days={streakCount} /> : null}
           />
         </RevealItem>
+
+        {user && !hasPlan ? (
+          <RevealItem>
+            <NoPlanBanner />
+          </RevealItem>
+        ) : null}
+
+        {user && hasPlan && plan ? (
+          <RevealItem>
+            <TodaysStrategiesCard plan={plan} />
+          </RevealItem>
+        ) : null}
 
         <RevealItem>
           <Card className="relative mt-2 overflow-hidden p-6">
@@ -84,6 +101,25 @@ export default async function HomePage() {
             </div>
           </Card>
         </RevealItem>
+
+        {user ? (
+          <RevealItem>
+            <Card className="mt-3 flex items-center justify-between gap-3 p-4">
+              <div className="space-y-0.5">
+                <p className="font-semibold text-[var(--color-ink)]">After eating?</p>
+                <p className="text-xs text-[var(--color-ink-soft)]">
+                  A quick five-tap log so trends actually fill in.
+                </p>
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/after">
+                  Log it
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </Card>
+          </RevealItem>
+        ) : null}
 
         {!user ? (
           <RevealItem>

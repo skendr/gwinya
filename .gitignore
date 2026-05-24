@@ -39,6 +39,7 @@ pnpm-debug.log*
 !.vscode/extensions.json
 *.tsbuildinfo
 
-# Claude Code local
-.claude/
+# Claude Code local — ignore per-machine settings but ship project skills
+.claude/*
+!.claude/skills/
 .env*

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { PageHeader, SectionHeading } from "@/components/layout";
 import { CalendarHeatmap, Sparkline } from "@/components/progress";
 import { IddsiLevelBadge } from "@/components/food-scan";
@@ -52,18 +53,31 @@ export default async function ProgressPage() {
     );
   }
 
-  const [{ count, lastCheckIn }, logs, scans] = await Promise.all([
+  const [{ count, lastCheckIn }, logs, meals] = await Promise.all([
     getStreak(),
     getLogs(),
-    getRecentScans(6),
+    getRecentScans({ savedOnly: true, limit: 6 }),
   ]);
 
   const today = isoDay();
   const daysSince = lastCheckIn ? daysBetween(lastCheckIn, today) : null;
   const checkInDays = logs.map((l) => l.date);
   const { confidence, coughingFlags, fatigue } = aggregateLast14(logs);
-  const matchCount = scans.filter((s) => s.matchesPrescribed === "matches").length;
-  const matchRate = scans.length ? Math.round((matchCount / scans.length) * 100) : null;
+  // Match rate is computed from saved meals — drafts shouldn't dilute it.
+  const matchCount = meals.filter((m) => m.matchesPrescribed === "matches").length;
+  const matchRate = meals.length ? Math.round((matchCount / meals.length) * 100) : null;
+
+  // Strategy adherence over the last 7 logged days. We count distinct
+  // days the user ticked "used a strategy" — not raw log rows — so a
+  // user who logs twice in a day doesn't get double credit.
+  const last7 = new Set<string>();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    last7.add(d.toISOString().slice(0, 10));
+  }
+  const adherenceDays = logs.filter((l) => last7.has(l.date) && l.usedStrategy).length;
+  const adherencePct = Math.round((adherenceDays / 7) * 100);
 
   return (
     <main className="flex-1 space-y-6 px-5">
@@ -131,10 +145,24 @@ export default async function ProgressPage() {
         </div>
       </div>
 
+      <Card className="space-y-1 p-5">
+        <p className="text-[0.7rem] font-medium uppercase tracking-[0.18em] text-[var(--color-muted)]">
+          Strategy adherence
+        </p>
+        <p className="text-sm leading-relaxed text-[var(--color-ink)]">
+          You used a strategy on{" "}
+          <span className="font-display text-xl font-semibold text-[var(--color-clay-deep)]">
+            {adherenceDays}
+          </span>{" "}
+          of the last 7 days{" "}
+          <span className="text-[var(--color-muted)]">({adherencePct}%)</span>.
+        </p>
+      </Card>
+
       <div>
         <SectionHeading
           eyebrow="Food scans"
-          title="Recent scans"
+          title="Recent meals"
           trailing={
             matchRate != null ? (
               <Badge tone={matchRate >= 70 ? "teal" : matchRate >= 40 ? "gold" : "coral"}>
@@ -143,45 +171,62 @@ export default async function ProgressPage() {
             ) : null
           }
         />
-        {scans.length ? (
-          <ul className="space-y-2">
-            {scans.map((s) => (
-              <li key={s.id}>
-                <Card className="flex items-center justify-between gap-3 p-3 px-4">
-                  <div className="space-y-0.5">
-                    <IddsiLevelBadge
-                      level={(s.predictedLevel ?? null) as IddsiLevel | null}
-                      size="sm"
-                    />
-                    <p className="text-xs text-[var(--color-muted)]">
-                      {relativeDay(s.createdAt.toISOString().slice(0, 10))}
-                      {s.prescribedLevelAtScan != null
-                        ? ` · prescribed L${s.prescribedLevelAtScan}`
-                        : null}
-                    </p>
-                  </div>
-                  <Badge
-                    tone={
-                      s.matchesPrescribed === "matches"
-                        ? "teal"
-                        : s.matchesPrescribed === "less-modified"
-                          ? "coral"
-                          : s.matchesPrescribed === "more-modified"
-                            ? "gold"
-                            : "cream"
-                    }
-                  >
-                    {s.matchesPrescribed === "matches" ? "match" : s.matchesPrescribed}
-                  </Badge>
-                </Card>
-              </li>
-            ))}
-          </ul>
+        {meals.length ? (
+          <>
+            <ul className="space-y-2">
+              {meals.map((m) => {
+                const when = m.eatenAt ?? m.createdAt;
+                return (
+                  <li key={m.id}>
+                    <Card className="flex items-center justify-between gap-3 p-3 px-4">
+                      <div className="min-w-0 space-y-0.5">
+                        <p className="truncate font-medium text-[var(--color-ink)]">
+                          {m.mealName ?? "Untitled meal"}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <IddsiLevelBadge
+                            level={(m.predictedLevel ?? null) as IddsiLevel | null}
+                            size="sm"
+                          />
+                          <span className="text-xs text-[var(--color-muted)]">
+                            {relativeDay(when.toISOString().slice(0, 10))}
+                            {m.prescribedLevelAtScan != null
+                              ? ` · prescribed L${m.prescribedLevelAtScan}`
+                              : null}
+                          </span>
+                        </div>
+                      </div>
+                      <Badge
+                        tone={
+                          m.matchesPrescribed === "matches"
+                            ? "teal"
+                            : m.matchesPrescribed === "less-modified"
+                              ? "coral"
+                              : m.matchesPrescribed === "more-modified"
+                                ? "gold"
+                                : "cream"
+                        }
+                      >
+                        {m.matchesPrescribed === "matches" ? "match" : m.matchesPrescribed}
+                      </Badge>
+                    </Card>
+                  </li>
+                );
+              })}
+            </ul>
+            <Link
+              href="/meals"
+              className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-[var(--color-clay-deep)]"
+            >
+              View all meals <ArrowRight className="h-4 w-4" />
+            </Link>
+          </>
         ) : (
           <Card className="p-5">
             <p className="text-sm text-[var(--color-ink-soft)]">
-              No scans yet. Tap the camera button at the bottom of the screen the next time
-              you&apos;re unsure of a meal.
+              No saved meals yet. After a scan, tap{" "}
+              <span className="font-semibold text-[var(--color-ink)]">Save meal</span>{" "}
+              to add it here.
             </p>
           </Card>
         )}

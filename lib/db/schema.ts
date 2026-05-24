@@ -61,6 +61,8 @@ export const profiles = pgTable("profiles", {
 /* Clinical plan (entered by the user from their SLT's instructions)       */
 /* ----------------------------------------------------------------------- */
 
+export type EducationalLink = { label: string; url: string };
+
 export const clinicalPlan = pgTable(
   "clinical_plan",
   {
@@ -70,7 +72,26 @@ export const clinicalPlan = pgTable(
     strategies: jsonb("strategies").$type<string[]>().default(sql`'[]'::jsonb`),
     exercises: jsonb("exercises").$type<string[]>().default(sql`'[]'::jsonb`),
     foodsToAvoid: jsonb("foods_to_avoid").$type<string[]>().default(sql`'[]'::jsonb`),
+    /** SLT-personalised flags (handwritten in the PLAN box). Treated more
+     * urgently in chat than the standard printed warning list. */
     redFlags: jsonb("red_flags").$type<string[]>().default(sql`'[]'::jsonb`),
+    /** Printed posture instruction from the slip header. */
+    posture: text("posture"),
+    /** Only checkboxes that were actually ticked on the slip. */
+    specialPrecautions: jsonb("special_precautions").$type<string[]>().default(sql`'[]'::jsonb`),
+    /** Standard form printed warning list. Kept separate from `redFlags` —
+     * see lib/ai/slt-slip-schema.ts for the rationale. */
+    warningSigns: jsonb("warning_signs").$type<string[]>().default(sql`'[]'::jsonb`),
+    educationalLinks: jsonb("educational_links")
+      .$type<EducationalLink[]>()
+      .default(sql`'[]'::jsonb`),
+    /** Verbatim handwriting from the PLAN box. Preserved for audit so
+     * neither us nor the model can paraphrase a clinician's words. */
+    rawPlanText: text("raw_plan_text"),
+    /** Storage key under the clinical-plans bucket: "<user_id>/<scan_id>.<ext>". */
+    sourceImagePath: text("source_image_path"),
+    parsedConfidence: text("parsed_confidence"), // 'low'|'medium'|'high'
+    parsedAt: timestamp("parsed_at", { withTimezone: true }),
     sltName: text("slt_name"),
     sltContact: text("slt_contact"),
     reviewDate: date("review_date"),
@@ -84,6 +105,28 @@ export const clinicalPlan = pgTable(
     fluidRange: check(
       "clinical_plan_fluid_range",
       sql`${t.fluidLevel} is null or (${t.fluidLevel} between 0 and 4)`,
+    ),
+  }),
+);
+
+/**
+ * Plan history. Every save into `clinical_plan` first inserts a snapshot
+ * of the previous row here, keyed by user_id + an immutable timestamp.
+ * Lets the user (and us, in support) trace "your plan changed from L5
+ * to L7 on this date" without paying for full per-column auditing.
+ */
+export const clinicalPlanHistory = pgTable(
+  "clinical_plan_history",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull(),
+    snapshot: jsonb("snapshot").$type<Record<string, unknown>>().notNull(),
+    replacedAt: timestamp("replaced_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => ({
+    userReplacedIdx: index("clinical_plan_history_user_replaced_idx").on(
+      t.userId,
+      t.replacedAt,
     ),
   }),
 );
@@ -175,11 +218,20 @@ export const foodScans = pgTable(
     confidence: text("confidence"), // low | medium | high
     prescribedLevelAtScan: integer("prescribed_level_at_scan"),
     userNote: text("user_note"),
+    /** AI's guess at what the food is. Drives the default meal_name. */
+    suggestedItemName: text("suggested_item_name"),
+    /** User-confirmed item name; editable on save. */
+    mealName: text("meal_name"),
+    /** True once the user has hit "Save meal" on this scan. Scans default to draft. */
+    saved: boolean("saved").default(false).notNull(),
+    /** Separable from created_at so the user can back-date a meal. */
+    eatenAt: timestamp("eaten_at", { withTimezone: true }),
     modelId: text("model_id").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => ({
     userCreatedIdx: index("food_scans_user_created_idx").on(t.userId, t.createdAt),
+    userSavedIdx: index("food_scans_user_saved_idx").on(t.userId, t.saved, t.eatenAt),
     predictedRange: check(
       "food_scans_predicted_range",
       sql`${t.predictedLevel} is null or (${t.predictedLevel} between 0 and 7)`,
@@ -194,6 +246,7 @@ export const foodScans = pgTable(
 export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 
+export type ClinicalPlanHistory = typeof clinicalPlanHistory.$inferSelect;
 export type ClinicalPlan = typeof clinicalPlan.$inferSelect;
 export type NewClinicalPlan = typeof clinicalPlan.$inferInsert;
 
