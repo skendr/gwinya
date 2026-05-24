@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -60,7 +61,7 @@ export function ReadinessChecklist({ checklist }: { checklist: Checklist }) {
               <p className="text-sm opacity-80">Slow and steady. We'll be here after.</p>
             </div>
             <Button variant="teal" size="sm" asChild>
-              <a href="/">Done</a>
+              <Link href="/">Done</Link>
             </Button>
           </motion.div>
         )}

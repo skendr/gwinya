@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Instrument_Sans, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import "./globals.css";
 
@@ -52,6 +54,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </div>
         <BottomNav />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
