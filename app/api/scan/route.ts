@@ -12,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { db } from "@/lib/db/client";
 import { clinicalPlan, foodScans } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { computeMatchesPrescribed } from "@/lib/content/iddsi";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -127,9 +128,41 @@ export async function POST(req: Request) {
     });
   if (uploadError) {
     console.error("[scan] storage upload failed", uploadError);
-    // Continue without persisting — return the analysis the user paid for.
-    return Response.json({ id: null, analysis, prescribed });
+    // Continue without persisting — return the analysis the user paid for,
+    // with the deterministic match override applied so the client UI is
+    // still correct even though we couldn't store the row.
+    const fallbackMatch = computeMatchesPrescribed(
+      analysis.predictedLevel ?? null,
+      prescribed,
+    );
+    return Response.json({
+      id: null,
+      analysis: { ...analysis, matchesPrescribed: fallbackMatch },
+      prescribed,
+    });
   }
+
+  // Compute matchesPrescribed deterministically from numeric levels.
+  // The model also returns an enum value but its labels are linguistically
+  // ambiguous ("less-modified" can be misread as "less changes" OR "less
+  // than prescription requires") and multiple prompt iterations did not
+  // fix recurring misclassifications. Arithmetic is robust where natural
+  // language is not. We log mismatches so we can monitor model drift.
+  const computedMatch = computeMatchesPrescribed(
+    analysis.predictedLevel ?? null,
+    prescribed,
+  );
+  if (analysis.matchesPrescribed !== computedMatch) {
+    console.warn(
+      `[scan] model matchesPrescribed=${analysis.matchesPrescribed} ` +
+        `disagrees with computed=${computedMatch} ` +
+        `(predicted=${analysis.predictedLevel}, prescribed=${prescribed}). ` +
+        `Using computed.`,
+    );
+  }
+  // Reflect the override in the response so the client's ScanResultCard
+  // shows the correct verdict immediately (it reads analysis.matchesPrescribed).
+  const correctedAnalysis = { ...analysis, matchesPrescribed: computedMatch };
 
   await db.insert(foodScans).values({
     id: scanId,
@@ -138,7 +171,7 @@ export async function POST(req: Request) {
     predictedLevel: analysis.predictedLevel ?? null,
     levelName: analysis.levelName,
     visualReasoning: analysis.visualReasoning,
-    matchesPrescribed: analysis.matchesPrescribed,
+    matchesPrescribed: computedMatch,
     caveats: analysis.caveats,
     redFlags: analysis.redFlagIds,
     suggestion: analysis.suggestion,
@@ -151,5 +184,5 @@ export async function POST(req: Request) {
     modelId: MODEL_IDS.default,
   });
 
-  return Response.json({ id: scanId, analysis, prescribed });
+  return Response.json({ id: scanId, analysis: correctedAnalysis, prescribed });
 }

@@ -173,6 +173,38 @@ export function isFoodWithinPlan(
 }
 
 /**
+ * Compute the matches_prescribed enum value deterministically from
+ * numeric IDDSI levels. The LLM still observes/classifies the image
+ * (returning predictedLevel), but the comparison "is this image
+ * within plan vs outside plan" is pure arithmetic and must not be
+ * delegated to the model.
+ *
+ * Why: the labels "more-modified" and "less-modified" are genuinely
+ * ambiguous in natural English ("less modified than prescribed" could
+ * mean either "lower IDDSI number" or "fewer modifications than the
+ * prescription requires"). Multiple prompt iterations did not
+ * eliminate the misreading, and a prescribed-L7 user seeing a L5 meal
+ * tagged "outside plan" is a clinical safety bug, not a tone issue.
+ *
+ * Rule (foods only — drink axis inverts, see isFoodWithinPlan):
+ *   predicted == prescribed → "matches"        (within plan)
+ *   predicted <  prescribed → "more-modified"  (softer, within plan)
+ *   predicted >  prescribed → "less-modified"  (firmer, outside plan)
+ *   either is null          → "unknown"
+ */
+export type MatchesPrescribed = "matches" | "more-modified" | "less-modified" | "unknown";
+
+export function computeMatchesPrescribed(
+  predicted: number | null,
+  prescribed: number | null,
+): MatchesPrescribed {
+  if (predicted == null || prescribed == null) return "unknown";
+  if (predicted === prescribed) return "matches";
+  if (predicted < prescribed) return "more-modified";
+  return "less-modified";
+}
+
+/**
  * Resolve the model's matchesPrescribed enum into the binary
  * verdict the UI shows: WITHIN plan or OUTSIDE plan (or UNKNOWN).
  *
