@@ -1,18 +1,13 @@
 import { generateObject, type CoreMessage } from "ai";
 import { z } from "zod";
-import {
-  models,
-  IDDSI_SCAN_SYSTEM_PROMPT,
-  ANTHROPIC_CACHE_EPHEMERAL,
-  ScanResult,
-} from "@/lib/ai";
+import { models, IDDSI_SCAN_SYSTEM_PROMPT, ScanResult } from "@/lib/ai";
 import { MODEL_IDS } from "@/lib/ai/models";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { db } from "@/lib/db/client";
-import { clinicalPlan, foodScans } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { foodScans } from "@/lib/db/schema";
 import { computeMatchesPrescribed } from "@/lib/content/iddsi";
+import { getDemoPlan } from "@/lib/content/patient-profile";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -61,12 +56,10 @@ export async function POST(req: Request) {
   const [, mimeType, base64] = match;
 
   /* Prescribed level (snapshot at scan time) --------------------------- */
-  const [plan] = await db
-    .select({ textureLevel: clinicalPlan.textureLevel })
-    .from(clinicalPlan)
-    .where(eq(clinicalPlan.userId, user.id))
-    .limit(1);
-  const prescribed = plan?.textureLevel ?? null;
+  // DEMO: sourced from the hardcoded Jordan profile (lib/content/patient-profile.ts)
+  // rather than the DB clinical_plan row. The IDDSI analysis itself stays
+  // genuine — only the prescribed level it compares against comes from here.
+  const prescribed = getDemoPlan().textureLevel ?? null;
 
   /* Vision call --------------------------------------------------------- */
   const userTextParts = [
@@ -83,8 +76,7 @@ export async function POST(req: Request) {
     {
       role: "system",
       content: IDDSI_SCAN_SYSTEM_PROMPT,
-      providerOptions: ANTHROPIC_CACHE_EPHEMERAL,
-    } as CoreMessage,
+    },
     {
       role: "user",
       content: [
@@ -97,12 +89,9 @@ export async function POST(req: Request) {
   let result;
   try {
     result = await generateObject({
-      model: models.default,
+      model: models.vision, // OpenAI gpt-4o vision — see lib/ai/models.ts
       schema: ScanResult,
       messages,
-      // No temperature override — Claude Opus 4.7 rejects an explicit
-      // temperature param. Default (1.0) is fine for structured output
-      // because the Zod schema constrains the response shape.
     });
   } catch (err) {
     console.error("[scan] model call failed", err);
@@ -114,75 +103,61 @@ export async function POST(req: Request) {
 
   const analysis = result.object;
 
-  /* Persist image + analysis ------------------------------------------- */
-  const admin = createAdminClient();
-  const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
-  const scanId = crypto.randomUUID();
-  const imagePath = `${user.id}/${scanId}.${ext}`;
-
-  const { error: uploadError } = await admin.storage
-    .from("food-scans")
-    .upload(imagePath, Buffer.from(base64, "base64"), {
-      contentType: mimeType,
-      upsert: false,
-    });
-  if (uploadError) {
-    console.error("[scan] storage upload failed", uploadError);
-    // Continue without persisting — return the analysis the user paid for,
-    // with the deterministic match override applied so the client UI is
-    // still correct even though we couldn't store the row.
-    const fallbackMatch = computeMatchesPrescribed(
-      analysis.predictedLevel ?? null,
-      prescribed,
-    );
-    return Response.json({
-      id: null,
-      analysis: { ...analysis, matchesPrescribed: fallbackMatch },
-      prescribed,
-    });
-  }
-
-  // Compute matchesPrescribed deterministically from numeric levels.
-  // The model also returns an enum value but its labels are linguistically
-  // ambiguous ("less-modified" can be misread as "less changes" OR "less
-  // than prescription requires") and multiple prompt iterations did not
-  // fix recurring misclassifications. Arithmetic is robust where natural
-  // language is not. We log mismatches so we can monitor model drift.
+  // Compute matchesPrescribed deterministically from numeric levels — the
+  // model's enum labels are linguistically ambiguous, so arithmetic (in code)
+  // is the source of truth for the within/outside-plan verdict.
   const computedMatch = computeMatchesPrescribed(
     analysis.predictedLevel ?? null,
     prescribed,
   );
-  if (analysis.matchesPrescribed !== computedMatch) {
-    console.warn(
-      `[scan] model matchesPrescribed=${analysis.matchesPrescribed} ` +
-        `disagrees with computed=${computedMatch} ` +
-        `(predicted=${analysis.predictedLevel}, prescribed=${prescribed}). ` +
-        `Using computed.`,
-    );
-  }
-  // Reflect the override in the response so the client's ScanResultCard
-  // shows the correct verdict immediately (it reads analysis.matchesPrescribed).
   const correctedAnalysis = { ...analysis, matchesPrescribed: computedMatch };
 
-  await db.insert(foodScans).values({
-    id: scanId,
-    userId: user.id,
-    imagePath,
-    predictedLevel: analysis.predictedLevel ?? null,
-    levelName: analysis.levelName,
-    visualReasoning: analysis.visualReasoning,
-    matchesPrescribed: computedMatch,
-    caveats: analysis.caveats,
-    redFlags: analysis.redFlagIds,
-    suggestion: analysis.suggestion,
-    confidence: analysis.confidence,
-    prescribedLevelAtScan: prescribed,
-    suggestedItemName: analysis.suggestedItemName,
-    // Pre-fill meal_name with the AI's guess. The user can edit and hit
-    // "Save meal" to flip saved=true; until then the row is a draft scan.
-    mealName: analysis.suggestedItemName,
-    modelId: MODEL_IDS.default,
-  });
+  /* Persist image + analysis (best-effort) ----------------------------- */
+  // Storage + DB require a fully-configured Supabase (service-role key +
+  // Postgres). When that's present (e.g. on Vercel) we store the scan so it
+  // can be saved as a meal. When it isn't (local dev), we skip persistence
+  // and return the analysis with id=null so the verdict still shows — the
+  // client just won't offer "Save meal" for that scan.
+  try {
+    const admin = createAdminClient();
+    const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
+    const scanId = crypto.randomUUID();
+    const imagePath = `${user.id}/${scanId}.${ext}`;
 
-  return Response.json({ id: scanId, analysis: correctedAnalysis, prescribed });
+    const { error: uploadError } = await admin.storage
+      .from("food-scans")
+      .upload(imagePath, Buffer.from(base64, "base64"), {
+        contentType: mimeType,
+        upsert: false,
+      });
+    if (uploadError) throw uploadError;
+
+    await db.insert(foodScans).values({
+      id: scanId,
+      userId: user.id,
+      imagePath,
+      predictedLevel: analysis.predictedLevel ?? null,
+      levelName: analysis.levelName,
+      visualReasoning: analysis.visualReasoning,
+      matchesPrescribed: computedMatch,
+      caveats: analysis.caveats,
+      redFlags: analysis.redFlagIds,
+      suggestion: analysis.suggestion,
+      confidence: analysis.confidence,
+      prescribedLevelAtScan: prescribed,
+      suggestedItemName: analysis.suggestedItemName,
+      // Pre-fill meal_name with the AI's guess. The user can edit and hit
+      // "Save meal" to flip saved=true; until then the row is a draft scan.
+      mealName: analysis.suggestedItemName,
+      modelId: MODEL_IDS.vision,
+    });
+
+    return Response.json({ id: scanId, analysis: correctedAnalysis, prescribed });
+  } catch (err) {
+    console.warn(
+      "[scan] persistence skipped (Supabase storage/DB unavailable):",
+      err instanceof Error ? err.message : err,
+    );
+    return Response.json({ id: null, analysis: correctedAnalysis, prescribed });
+  }
 }

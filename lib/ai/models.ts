@@ -1,4 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 
 /**
  * Model selection.
@@ -16,9 +17,17 @@ import { anthropic } from "@ai-sdk/anthropic";
 export const MODEL_IDS = {
   default: process.env.ANTHROPIC_MODEL ?? "claude-opus-4-7",
   fast: process.env.ANTHROPIC_MODEL_FAST ?? "claude-haiku-4-5-20251001",
+  // Vision model for the food check (app/api/scan). Uses OpenAI so it runs on
+  // the OpenAI key the voice companion already needs — no Anthropic key
+  // required for the demo. gpt-4o is vision-capable and supports generateObject.
+  vision: process.env.OPENAI_VISION_MODEL ?? "gpt-4o",
 } as const;
 
 export const models = {
   default: anthropic(MODEL_IDS.default),
   fast: anthropic(MODEL_IDS.fast),
+  // structuredOutputs:false → don't use OpenAI's strict json_schema mode, which
+  // rejects maxItems / numeric min-max keywords present in our ScanResult
+  // schema. We validate those ranges in code anyway.
+  vision: openai(MODEL_IDS.vision, { structuredOutputs: false }),
 };
