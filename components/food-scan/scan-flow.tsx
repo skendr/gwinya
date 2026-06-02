@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { CameraCapture } from "./camera-capture";
 import { ScanResultCard } from "./scan-result-card";
 import { SaveMealCard } from "./save-meal-card";
+import { planVerdict } from "@/lib/content/iddsi";
 import type { ScanResult } from "@/lib/ai/scan-schema";
 
 type ScanResponse = {
@@ -138,7 +139,14 @@ export function ScanFlow() {
       {phase === "done" && result ? (
         <>
           <ScanResultCard result={result.analysis} prescribed={result.prescribed} />
-          {result.id ? (
+          {/* Only offer to log the meal when it's safe to eat. An outside-plan
+              result shows a gentle note instead of the save card. */}
+          {planVerdict(result.analysis.matchesPrescribed) === "outside" ? (
+            <Card className="p-5 text-sm leading-relaxed text-[var(--color-ink-soft)]">
+              This one&apos;s outside your plan, so we won&apos;t log it as-is. Soften it
+              first, then take another photo.
+            </Card>
+          ) : result.id ? (
             <SaveMealCard
               scanId={result.id}
               suggestedName={result.analysis.suggestedItemName}

@@ -27,6 +27,20 @@ declare global {
   var __gwinyaDb: ReturnType<typeof drizzle<typeof schema>> | undefined;
 }
 
+/**
+ * Whether a database connection string is configured. Lets server actions
+ * degrade gracefully (return safe defaults) instead of crashing when no
+ * Postgres is wired — e.g. local dev before `vercel env pull`. On Vercel the
+ * Supabase Marketplace integration provides POSTGRES_URL, so this is true.
+ */
+export function isDbConfigured(): boolean {
+  return !!(
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL
+  );
+}
+
 function buildClient() {
   const url =
     process.env.POSTGRES_URL_NON_POOLING ??

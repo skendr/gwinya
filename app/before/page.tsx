@@ -1,27 +1,19 @@
 import { PageHeader } from "@/components/layout";
-import { ReadinessChecklist } from "@/components/readiness-checklist";
-import { buildBeforeMeal } from "@/lib/content/checklists";
-import { getClinicalPlan } from "@/app/plan/actions";
+import { MealCompanion } from "@/components/meal-companion";
 
 export const metadata = {
-  title: "Before I eat",
+  title: "Meal companion",
 };
 
-export default async function BeforePage() {
-  // Personalises the standard 5-item checklist with up to 3 plan-derived
-  // strategy items. Anonymous users (and signed-in users without a plan)
-  // see the base list unchanged.
-  const plan = await getClinicalPlan();
-  const checklist = buildBeforeMeal(plan);
-
+export default function BeforePage() {
   return (
     <main className="flex-1 px-5">
       <PageHeader
-        eyebrow="Readiness check"
-        title="Before I eat"
-        subtitle="Five gentle prompts to set you up for a safer meal."
+        eyebrow="Meal companion"
+        title="Let's eat together"
+        subtitle="A calm voice to talk you through it — one small step at a time."
       />
-      <ReadinessChecklist checklist={checklist} />
+      <MealCompanion />
     </main>
   );
 }

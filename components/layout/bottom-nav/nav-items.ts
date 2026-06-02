@@ -8,7 +8,7 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { href: "/", label: "Today", icon: Home },
-  { href: "/before", label: "Before", icon: ClipboardCheck },
+  { href: "/before", label: "Companion", icon: ClipboardCheck },
   { href: "/learn", label: "Learn", icon: Sparkles },
   { href: "/progress", label: "Progress", icon: LineChart },
 ];

@@ -89,12 +89,12 @@ export default async function HomePage() {
                 About to eat or drink?
               </p>
               <p className="text-pretty text-[0.95rem] leading-relaxed text-[var(--color-ink-soft)]">
-                Run through your readiness check — five short questions, under a minute.
+                Your meal companion talks you through it — a calm voice, one small step at a time.
               </p>
               <Button asChild size="lg" className="w-full">
                 <Link href="/before">
                   <ClipboardCheck className="h-5 w-5" />
-                  Start readiness check
+                  Start meal companion
                   <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>

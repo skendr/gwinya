@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { eq, and, desc } from "drizzle-orm";
-import { db } from "@/lib/db/client";
+import { db, isDbConfigured } from "@/lib/db/client";
 import { streak, symptomLogs, lessonProgress, profiles, foodScans } from "@/lib/db/schema";
 import { getUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -28,7 +28,7 @@ async function ensureProfile(userId: string) {
 
 export async function getStreak() {
   const user = await getUser();
-  if (!user) return { count: 0, lastCheckIn: null as string | null };
+  if (!user || !isDbConfigured()) return { count: 0, lastCheckIn: null as string | null };
   const [row] = await db
     .select()
     .from(streak)
@@ -43,6 +43,9 @@ export async function getStreak() {
 export async function recordCheckIn() {
   const user = await getUser();
   if (!user) throw new Error("unauthorised");
+  // No DB wired (local dev) — treat as a successful no-op so the companion's
+  // best-effort check-in doesn't error. Nothing to persist.
+  if (!isDbConfigured()) return { count: 0, lastCheckIn: null as string | null };
   await ensureProfile(user.id);
 
   const today = isoDay();
@@ -71,7 +74,7 @@ export async function recordCheckIn() {
 
 export async function getLogs(): Promise<SymptomLog[]> {
   const user = await getUser();
-  if (!user) return [];
+  if (!user || !isDbConfigured()) return [];
   const rows = await db
     .select()
     .from(symptomLogs)
@@ -92,6 +95,9 @@ export async function getLogs(): Promise<SymptomLog[]> {
 export async function appendLog(log: SymptomLog) {
   const user = await getUser();
   if (!user) throw new Error("unauthorised");
+  // No DB wired (local dev) — accept silently so the after-meal log UI still
+  // completes. Nothing is persisted until a database is configured.
+  if (!isDbConfigured()) return;
   await ensureProfile(user.id);
 
   // Match the localStorage contract (lib/storage/local.ts): one log per
@@ -126,7 +132,7 @@ export async function appendLog(log: SymptomLog) {
 
 export async function markLessonComplete(slug: string) {
   const user = await getUser();
-  if (!user) return;
+  if (!user || !isDbConfigured()) return;
   await ensureProfile(user.id);
   await db
     .insert(lessonProgress)
@@ -148,7 +154,7 @@ type RecentScansOpts = {
 
 export async function getRecentScans(arg: number | RecentScansOpts = 5) {
   const user = await getUser();
-  if (!user) return [];
+  if (!user || !isDbConfigured()) return [];
   const opts: Required<RecentScansOpts> =
     typeof arg === "number"
       ? { savedOnly: false, limit: arg }
@@ -188,6 +194,7 @@ export async function saveMeal({
 }) {
   const user = await getUser();
   if (!user) throw new Error("unauthorised");
+  if (!isDbConfigured()) throw new Error("Saving needs a database — none is configured.");
 
   const trimmed = mealName.trim();
   if (!trimmed) throw new Error("meal-name-required");
@@ -214,6 +221,7 @@ export async function saveMeal({
 export async function deleteMeal(scanId: string) {
   const user = await getUser();
   if (!user) throw new Error("unauthorised");
+  if (!isDbConfigured()) throw new Error("Deleting needs a database — none is configured.");
 
   const [row] = await db
     .select({ imagePath: foodScans.imagePath })

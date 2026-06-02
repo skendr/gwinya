@@ -61,7 +61,43 @@ export async function passwordSignIn(formData: FormData) {
     redirect(next);
   }
 
-  // 2) Try to create — server-side, no email verification required.
+  // 2) Account doesn't exist (or the password was wrong). Create it.
+  //    Prefer the admin path (creates a confirmed user, no email verification)
+  //    when a service-role key is configured — e.g. on Vercel with the
+  //    Supabase integration. Without it (local dev), fall back to public
+  //    sign-up so login still works instead of crashing.
+  const hasServiceRole =
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!hasServiceRole) {
+    // Public sign-up. Whether a session is minted immediately depends on the
+    // project's "Confirm email" setting (Authentication → Sign In / Providers).
+    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    if (signUpError) {
+      const msg = (signUpError.message ?? "").toLowerCase();
+      const alreadyRegistered =
+        msg.includes("already") || msg.includes("registered") || msg.includes("exists");
+      backToSignIn(
+        alreadyRegistered
+          ? "Wrong password for this account — try again."
+          : signUpError.message ?? "Couldn't create account.",
+        "password",
+        next,
+      );
+    }
+    if (!data.session) {
+      backToSignIn(
+        "Account created. Confirm it via the email we just sent — or turn off " +
+          "email confirmation in your Supabase project — then sign in.",
+        "password",
+        next,
+      );
+    }
+    sendWelcomeEmail({ to: email }).catch(() => {});
+    redirect(next);
+  }
+
+  // Service-role path: admin-create a confirmed user, then sign in.
   const admin = createAdminClient();
   const { error: createError } = await admin.auth.admin.createUser({
     email,
@@ -85,7 +121,7 @@ export async function passwordSignIn(formData: FormData) {
     );
   }
 
-  // 3) Brand-new account — fire the welcome email and sign in.
+  // Brand-new account — fire the welcome email and sign in.
   sendWelcomeEmail({ to: email }).catch(() => {});
 
   const { error: postCreateError } = await supabase.auth.signInWithPassword({
