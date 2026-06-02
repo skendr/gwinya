@@ -4,7 +4,7 @@ A gentle, gamified companion for people living with dysphagia (difficulty swallo
 
 Gwinya isn't a clinical product. It's a habit-and-confidence layer that sits *on top of* a plan
 the user has already agreed with their Speech and Language Therapist (SLT). The app helps
-remember strategies, run readiness checks before meals, track patterns over time, and prepare
+remember strategies, talk through meals with a voice companion, track patterns over time, and prepare
 questions for the next clinical appointment — Duolingo-style, but quieter.
 
 The full product brief lives in [`app_instructions_jordan.md`](./app_instructions_jordan.md).
