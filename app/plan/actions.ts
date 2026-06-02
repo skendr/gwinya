@@ -8,6 +8,14 @@ import { clinicalPlan, clinicalPlanHistory } from "@/lib/db/schema";
 import { getUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { EducationalLink } from "@/lib/db/schema";
+import { getDemoPlan } from "@/lib/content/patient-profile";
+
+/**
+ * DEMO: when true, getClinicalPlan() returns the hardcoded Jordan profile
+ * (lib/content/patient-profile.ts) instead of the DB-backed plan. Flip to
+ * false to restore the real SLT-slip-scanned plan.
+ */
+const USE_HARDCODED_PROFILE = true;
 
 /**
  * Upsert the user's clinical_plan from a /plan/review submission.
@@ -154,6 +162,8 @@ export async function saveClinicalPlan(input: SaveClinicalPlanInput) {
 export async function getClinicalPlan() {
   const user = await getUser();
   if (!user) return null;
+  // DEMO: serve the hardcoded Jordan profile so no SLT slip scan is needed.
+  if (USE_HARDCODED_PROFILE) return getDemoPlan();
   const [row] = await db
     .select()
     .from(clinicalPlan)
