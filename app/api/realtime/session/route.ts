@@ -1,5 +1,6 @@
 import { JORDAN_PROFILE } from "@/lib/content/patient-profile";
-import { buildCompanionInstructions } from "@/lib/ai/companion";
+import { buildCompanionInstructions, type CompanionMode } from "@/lib/ai/companion";
+import { afterMealLogTool } from "@/lib/ai/after-meal-tool";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,7 @@ export const runtime = "nodejs";
  */
 const OPENAI_REALTIME_MODEL = process.env.OPENAI_REALTIME_MODEL ?? "gpt-realtime";
 
-export async function POST() {
+export async function POST(req: Request) {
   // No auth gate: the companion is driven entirely by the hardcoded profile
   // and reads no per-user data, so it works for anonymous browsing like the
   // rest of the pre-meal flow. (The food check / meal log still require login
@@ -24,6 +25,17 @@ export async function POST() {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return Response.json({ error: "missing-openai-key" }, { status: 500 });
+  }
+
+  // "full" runs the whole meal arc; "after" jumps straight to the after-meal
+  // check (the standalone /after page). Default to the full flow when the body
+  // is missing or unparseable.
+  let mode: CompanionMode = "full";
+  try {
+    const body = (await req.json()) as { mode?: unknown };
+    if (body?.mode === "after") mode = "after";
+  } catch {
+    /* no/invalid body — keep the full flow */
   }
 
   let res: Response;
@@ -38,10 +50,14 @@ export async function POST() {
         session: {
           type: "realtime",
           model: OPENAI_REALTIME_MODEL,
-          instructions: buildCompanionInstructions(JORDAN_PROFILE),
+          instructions: buildCompanionInstructions(JORDAN_PROFILE, mode),
           audio: {
             output: { voice: JORDAN_PROFILE.voice },
           },
+          // The companion saves the after-meal check by calling this function;
+          // the browser fulfils it via the saveAfterMealCheck server action.
+          tools: [afterMealLogTool],
+          tool_choice: "auto",
         },
       }),
     });

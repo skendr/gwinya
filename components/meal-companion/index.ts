@@ -1,1 +1,1 @@
-export { MealCompanion } from "./meal-companion";
+export { MealCompanion, type MealCompanionMode } from "./meal-companion";
