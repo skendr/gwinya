@@ -20,28 +20,22 @@ function describeMatch(
   prescribed: number | null,
   predicted: number | null,
 ): MatchTone | null {
-  // Binary verdict: a meal is either within the user's plan (the SLT-
-  // prescribed IDDSI level, or anything more modified than it) or it is
-  // outside that plan. See lib/content/iddsi.ts:planVerdict.
+  // Genuine binary verdict from lib/content/iddsi.ts (predicted <= prescribed
+  // is within plan). We surface it as a plain safe / not-safe signal and keep
+  // IDDSI level numbers out of the user-facing copy.
   if (match === "unknown" || prescribed == null || predicted == null) return null;
-  if (match === "more-modified") {
+  if (match === "more-modified" || match === "matches") {
     return {
       badge: "teal",
-      label: "Within plan",
-      blurb: `Your SLT prescribed Level ${prescribed}. This reads like Level ${predicted} — softer than the line your plan sets, so it's within plan.`,
-    };
-  }
-  if (match === "matches") {
-    return {
-      badge: "teal",
-      label: "Within plan",
-      blurb: `Your SLT prescribed Level ${prescribed}, and this reads like Level ${prescribed}. Right at your plan — within plan.`,
+      label: "Safe to eat",
+      blurb: "This looks fine for your plan. Take small bites and go slowly.",
     };
   }
   return {
     badge: "rose",
-    label: "Outside plan",
-    blurb: `Your SLT prescribed Level ${prescribed}. This reads like Level ${predicted} — less modified than your plan allows, so it's outside plan. You might mash it more or cut it smaller before tucking in.`,
+    label: "Outside your plan",
+    blurb:
+      "This looks firmer than your plan. Best to soften it first — mash or cut it small — before eating.",
   };
 }
 
