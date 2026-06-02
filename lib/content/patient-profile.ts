@@ -14,10 +14,13 @@ import type { ClinicalPlan } from "@/lib/db/schema";
  *
  *  • textureLevel drives the food check verdict. The scan is a GENUINE IDDSI
  *    analysis: a photo is "safe" when its predicted level <= textureLevel
- *    (see lib/content/iddsi.ts:computeMatchesPrescribed). Level 7 ("Regular")
- *    means every food reads as safe today — that is how "all textures
- *    allowed" is expressed, without faking the analysis. Lower this number
- *    (e.g. 4) and firmer meals will genuinely come back UNSAFE.
+ *    (see lib/content/iddsi.ts:computeMatchesPrescribed). Peter is prescribed
+ *    Level 7 EASY TO CHEW — softer-cooked everyday foods (a soft cream-filled
+ *    biscuit, not a hard biscotti). IDDSI numbers Easy to Chew and Regular
+ *    both as level 7, so the scanner — which compares numbers only — still
+ *    reads every food as safe today and cannot tell the two level-7 variants
+ *    apart. Lower this number (e.g. 4) and firmer meals will genuinely come
+ *    back UNSAFE.
  *
  *  • The conversational rules (planSummary / cognitiveNotes / posture / pace)
  *    are for the voice companion ONLY. The companion must keep language
@@ -48,21 +51,36 @@ export type PatientProfile = {
 };
 
 export const JORDAN_PROFILE: PatientProfile = {
-  name: "Jordan",
+  name: "Peter",
   age: 27,
   sex: "male",
-  diagnosis: "Dysphagia with cognitive impairment",
-  // All textures allowed → Level 7 (Regular / Easy to Chew).
+  diagnosis: "Traumatic brain injury with dysphagia",
+  // Level 7 Easy to Chew (softer-cooked everyday foods). Numerically still
+  // level 7, so the food check reads every food as safe — see the note above.
   textureLevel: 7,
-  // All drinks allowed → Level 0 (Thin).
+  // Thin fluids, no thickener → Level 0 (Thin).
   fluidLevel: 0,
-  planSummary: "Small bites, all textures.",
+  planSummary:
+    "Softer everyday foods. Small mouthfuls, slow pace, and clear your mouth before the next bite.",
   posture: "Head lowered slightly — a gentle chin tuck.",
-  strategies: ["Small bites, every time.", "Slow pace — no hurry."],
+  strategies: [
+    "Small mouthfuls, every time.",
+    "Slow pace — no rushing.",
+    "Finish each mouthful before the next.",
+    "A sip of water every few mouthfuls.",
+    "Calm and quiet at mealtimes — TV off.",
+  ],
   cognitiveNotes:
     "Keep language simple and concrete. One small step at a time. " +
-    "Repeat gently when needed. Never sound rushed or frustrated.",
-  afterMealCare: "Prompt gentle oral care — a soft brush and a rinse.",
+    "Repeat gently when needed. Never sound rushed or frustrated. " +
+    "He can be impulsive and may rush — eating quickly or taking big " +
+    "mouthfuls, which can make him cough or choke. If he speeds up, warmly " +
+    "and gently remind him to slow down, take a small mouthful, and finish " +
+    "it before the next. Keep mealtimes calm with few distractions: stay " +
+    "quiet while he is actually chewing and swallowing, and encourage the TV off.",
+  afterMealCare:
+    "When he's finished, check his mouth is empty — no food left in his " +
+    "cheeks or under his tongue. Then a rinse, or gentle mouth care with a soft brush.",
   voice: "alloy",
 };
 
@@ -82,7 +100,11 @@ export function getDemoPlan(): ClinicalPlan {
     strategies: JORDAN_PROFILE.strategies,
     exercises: [],
     foodsToAvoid: [],
-    redFlags: [],
+    redFlags: [
+      "Watch for increased coughing during eating or drinking.",
+      "Report any true choking incident to the SLT team urgently.",
+      "Choking means the airway is completely blocked — unable to breathe or cough. It may need back slaps or abdominal thrusts to clear.",
+    ],
     posture: JORDAN_PROFILE.posture,
     specialPrecautions: [],
     warningSigns: [],
