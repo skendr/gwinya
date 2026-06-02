@@ -8,6 +8,10 @@ import { getUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isoDay, daysBetween } from "@/lib/format/dates";
 import type { SymptomLog } from "@/lib/domain/types";
+import {
+  afterMealCheckToSymptomLog,
+  type AfterMealCheckInput,
+} from "@/lib/ai/after-meal-tool";
 
 /**
  * Server-side mirror of the localStorage helpers. Each function requires an
@@ -124,6 +128,27 @@ export async function appendLog(log: SymptomLog) {
 
   revalidatePath("/progress");
   revalidatePath("/");
+}
+
+/**
+ * Best-effort save for the voice after-meal check (the companion's
+ * `save_after_meal_log` tool call — see lib/ai/after-meal-tool.ts). Unlike
+ * appendLog it never throws: the voice flow must keep going whether or not
+ * there's a signed-in user or a configured database, mirroring the food
+ * check's best-effort persistence. Returns whether the row actually
+ * persisted so the UI can show the right confirmation.
+ */
+export async function saveAfterMealCheck(
+  input: AfterMealCheckInput,
+): Promise<{ saved: boolean }> {
+  const user = await getUser();
+  if (!user || !isDbConfigured()) return { saved: false };
+  try {
+    await appendLog(afterMealCheckToSymptomLog(input));
+    return { saved: true };
+  } catch {
+    return { saved: false };
+  }
 }
 
 /* ----------------------------------------------------------------------- */

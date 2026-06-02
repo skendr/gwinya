@@ -108,12 +108,12 @@ export default async function HomePage() {
               <div className="space-y-0.5">
                 <p className="font-semibold text-[var(--color-ink)]">After eating?</p>
                 <p className="text-xs text-[var(--color-ink-soft)]">
-                  A quick five-tap log so trends actually fill in.
+                  Talk it through — a few gentle questions, noted for you.
                 </p>
               </div>
               <Button asChild variant="outline" size="sm">
                 <Link href="/after">
-                  Log it
+                  Check in
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>

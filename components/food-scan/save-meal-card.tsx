@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useTransition, useId } from "react";
-import { CheckCircle2, ChevronDown, ChevronUp, Loader2, UtensilsCrossed } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowRight,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  UtensilsCrossed,
+} from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -57,6 +65,7 @@ export function SaveMealCard({ scanId, suggestedName, defaultEatenAt }: Props) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: "spring", stiffness: 320, damping: 24 }}
+        className="space-y-3"
       >
         <Card className="flex items-center gap-3 p-4">
           <CheckCircle2 className="h-6 w-6 shrink-0 text-[var(--color-moss-deep)]" />
@@ -66,6 +75,24 @@ export function SaveMealCard({ scanId, suggestedName, defaultEatenAt }: Props) {
               {trimmed} · {formatPretty(eatenAt)}
             </p>
           </div>
+        </Card>
+
+        {/* Hand the meal flow forward to the voice after-meal check. The scan
+            navigation ended any live companion session, so this is how the
+            post-meal check gets picked back up once eating is done. */}
+        <Card className="flex items-center justify-between gap-3 p-4">
+          <div className="space-y-0.5">
+            <p className="font-semibold text-[var(--color-ink)]">When you&apos;ve finished eating</p>
+            <p className="text-xs text-[var(--color-ink-soft)]">
+              Talk through a quick after-meal check — Gwinya notes it for you.
+            </p>
+          </div>
+          <Button asChild variant="teal" size="sm">
+            <Link href="/after">
+              After-meal check
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
         </Card>
       </motion.div>
     );
