@@ -45,7 +45,7 @@ export const afterMealLogTool = {
       usedStrategy: {
         type: "boolean",
         description:
-          "They used at least one of their strategies (small bites, slow pace, chin tuck).",
+          "They used at least one of their strategies (small bites, slow pace, sitting upright).",
       },
       notes: {
         type: "string",

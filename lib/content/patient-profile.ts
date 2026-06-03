@@ -62,7 +62,7 @@ export const JORDAN_PROFILE: PatientProfile = {
   fluidLevel: 0,
   planSummary:
     "Softer everyday foods. Small mouthfuls, slow pace, and clear your mouth before the next bite.",
-  posture: "Head lowered slightly — a gentle chin tuck.",
+  posture: "A neutral, upright position — sitting up straight with the head level (not tipped back).",
   strategies: [
     "Small mouthfuls, every time.",
     "Slow pace — no rushing.",

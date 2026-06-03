@@ -339,7 +339,7 @@ the structure is consistent:
 - PLAN: a hand-written box containing
     - the prescribed IDDSI texture level ("Level 5: Minced and moist")
       and/or fluid level ("Level 0: Thin"),
-    - bullet strategies (e.g. "small sips", "chin tuck"),
+    - bullet strategies (e.g. "small sips", "sit upright"),
     - optional exercises, foods to avoid, and educational links.
 - SLT signature + date (handwritten).
 
