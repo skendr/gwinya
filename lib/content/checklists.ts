@@ -25,7 +25,7 @@ export const beforeMeal: Checklist = {
     {
       id: "strategies",
       prompt: "I remember my strategies for today",
-      helper: "Small sips, slow pace, chin tuck — whatever your SLT suggested.",
+      helper: "Small sips, slow pace, sitting upright — whatever your SLT suggested.",
     },
     {
       id: "calm",
