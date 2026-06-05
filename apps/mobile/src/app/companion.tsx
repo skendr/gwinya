@@ -86,6 +86,22 @@ export default function Companion() {
             <Transcript lines={c.lines} partial={c.partial} />
           </Card>
           {c.check ? <CheckCard check={c.check} /> : null}
+          {mode === "full" && !c.check ? (
+            <Card style={styles.foodCheck}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.liveLabel}>Check your food</Text>
+                <Body style={{ color: colors.inkSoft, fontSize: 14 }}>Photo your plate.</Body>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push("/scan")}
+                style={styles.foodBtn}
+              >
+                <Ionicons name="camera-outline" size={18} color={colors.paper} />
+                <Text style={styles.foodBtnText}>Check</Text>
+              </Pressable>
+            </Card>
+          ) : null}
           <View style={{ flex: 1 }} />
           <SecondaryButton label={copy.endLabel} onPress={c.stop} />
         </View>
@@ -182,4 +198,15 @@ const styles = StyleSheet.create({
   liveLabel: { fontFamily: fonts.bodySemibold, fontSize: 15, color: colors.ink },
   placeholder: { fontFamily: fonts.body, fontSize: 15, fontStyle: "italic", color: colors.muted },
   line: { fontFamily: fonts.body, fontSize: 16, lineHeight: 24, color: colors.ink },
+  foodCheck: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  foodBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.clay,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  foodBtnText: { fontFamily: fonts.bodySemibold, fontSize: 15, color: colors.paper },
 });

@@ -60,6 +60,20 @@ export default function Today() {
         href={{ pathname: "/companion", params: { mode: "full" } }}
       />
 
+      <ActionCard
+        icon="camera-outline"
+        title="Check your food"
+        subtitle="Photo a plate, compare to your plan"
+        href="/scan"
+      />
+
+      <ActionCard
+        icon="restaurant-outline"
+        title="Your meals"
+        subtitle="What you've saved over time"
+        href="/meals"
+      />
+
       <Card>
         <Text style={styles.cardEyebrow}>NEXT LESSON</Text>
         <Text style={styles.cardTitle}>{nextLesson.title}</Text>
