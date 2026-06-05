@@ -11,10 +11,16 @@
     "./content/checklists": "./src/content/checklists.ts",
     "./content/patient-profile": "./src/content/patient-profile.ts",
     "./format/dates": "./src/format/dates.ts",
-    "./logic/streak": "./src/logic/streak.ts"
+    "./logic/streak": "./src/logic/streak.ts",
+    "./content/iddsi": "./src/content/iddsi.ts",
+    "./ai/after-meal-tool": "./src/ai/after-meal-tool.ts",
+    "./ai/scan-schema": "./src/ai/scan-schema.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
