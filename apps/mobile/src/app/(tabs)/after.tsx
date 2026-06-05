@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Link } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import type { SymptomLog } from "@gwinya/shared/domain/types";
 import { isoDay } from "@gwinya/shared/format/dates";
 import { useSession } from "@/lib/auth";
@@ -72,6 +74,13 @@ export default function After() {
         <Subtitle>Just a quick note — patterns over time are what matter.</Subtitle>
       </View>
 
+      <Link href={{ pathname: "/companion", params: { mode: "after" } }} asChild>
+        <Pressable style={styles.voiceLink}>
+          <Ionicons name="mic-outline" size={18} color={colors.clay} />
+          <Text style={styles.voiceLinkText}>Talk it through instead</Text>
+        </Pressable>
+      </Link>
+
       <View style={{ gap: spacing.md }}>
         <CheckRow label="I coughed during the meal" checked={coughing} onToggle={() => setCoughing((v) => !v)} />
         <CheckRow label="My voice felt wet or gurgly" checked={wetVoice} onToggle={() => setWetVoice((v) => !v)} />
@@ -125,4 +134,15 @@ const styles = StyleSheet.create({
   confDotTextActive: { color: colors.paper },
   confScale: { flexDirection: "row", justifyContent: "space-between" },
   confHint: { fontFamily: fonts.body, fontSize: 13, color: colors.muted },
+  voiceLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    alignSelf: "flex-start",
+    backgroundColor: colors.claySoft,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  voiceLinkText: { fontFamily: fonts.bodySemibold, fontSize: 15, color: colors.clayDeep },
 });

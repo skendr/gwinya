@@ -46,6 +46,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="auth-callback" options={{ presentation: "modal" }} />
+          <Stack.Screen name="companion" options={{ presentation: "modal" }} />
         </Stack>
       </SupabaseProvider>
     </SafeAreaProvider>

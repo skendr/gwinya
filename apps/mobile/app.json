@@ -34,6 +34,12 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 96
         }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "Gwinya uses your microphone so you can talk with your meal companion."
+        }
       ]
     ],
     "experiments": {
