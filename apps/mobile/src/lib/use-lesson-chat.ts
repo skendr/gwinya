@@ -18,10 +18,9 @@ export type ChatMessage = {
  * type `0` (`0:"chunk"`). Lesson mode only streams text (no tool calls), so
  * handling type 0 is sufficient and avoids depending on the AI SDK in RN.
  *
- * We forward the Supabase access token as a Bearer header so the route can
- * (optionally, see Phase 5) ground replies in the user's plan; today the route
- * reads cookies, so without that change the chat simply streams without plan
- * context — which is fine.
+ * We forward the Supabase access token as a Bearer header; the /api/chat route
+ * validates it and grounds replies in the user's clinical plan, the same way
+ * the web cookie session does.
  */
 export function useLessonChat(lessonContext: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
