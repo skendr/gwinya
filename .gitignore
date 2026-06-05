@@ -1,5 +1,6 @@
 # deps
 /node_modules
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -16,6 +17,17 @@ next-env.d.ts
 # build
 /build
 /dist
+
+# mobile (Expo / React Native) — generated native projects + caches.
+# The iOS/Android projects are regenerated from app.json via `expo prebuild`
+# (Continuous Native Generation), so we don't track them.
+apps/*/.expo/
+apps/*/ios/
+apps/*/android/
+apps/*/dist/
+apps/*/.expo-shared/
+*.keystore
+*.jks
 
 # env
 .env

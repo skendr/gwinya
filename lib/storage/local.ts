@@ -1,12 +1,16 @@
 "use client";
 
 import type { StreakState, SymptomLog } from "@/lib/domain/types";
-import { isoDay, daysBetween } from "@/lib/format/dates";
+import { computeNextStreak, upsertLogByDate } from "@gwinya/shared/logic/streak";
 
 /**
  * Tiny localStorage wrapper. The real app will sync with a backend (Supabase,
  * Convex, etc.); for the scaffold we keep daily state on-device so the home
  * screen feels alive without auth.
+ *
+ * The streak/log transition rules live in @gwinya/shared so the on-device
+ * path here and the Drizzle Server Action path (lib/storage/actions.ts) — and
+ * the mobile direct-Supabase path — all behave identically.
  */
 
 const KEY_STREAK = "gwinya:streak";
@@ -36,12 +40,7 @@ export function getStreak(): StreakState {
 }
 
 export function recordCheckIn(): StreakState {
-  const today = isoDay();
-  const current = getStreak();
-  if (current.lastCheckIn === today) return current;
-  const gap = current.lastCheckIn ? daysBetween(current.lastCheckIn, today) : null;
-  const count = gap === 1 ? current.count + 1 : 1;
-  const next: StreakState = { count, lastCheckIn: today };
+  const next = computeNextStreak(getStreak());
   write(KEY_STREAK, next);
   return next;
 }
@@ -51,7 +50,5 @@ export function getLogs(): SymptomLog[] {
 }
 
 export function appendLog(log: SymptomLog): void {
-  const logs = getLogs();
-  const filtered = logs.filter((l) => l.date !== log.date);
-  write(KEY_LOGS, [...filtered, log]);
+  write(KEY_LOGS, upsertLogByDate(getLogs(), log));
 }
