@@ -13,8 +13,9 @@
  *    same folder.
  *  - shadcn primitives are NOT generated here — use `pnpm dlx shadcn add …`
  *    so they land in `components/ui/` per shadcn convention.
- *  - Lessons live in `lib/content/lessons.ts`; the generator writes a new
- *    file under `lib/content/lessons/` and reminds you to register it.
+ *  - Lessons live in `packages/shared/src/content/lessons.ts` (shared by web
+ *    and mobile); the generator writes a new stub under
+ *    `packages/shared/src/content/lessons/` and reminds you to register it.
  */
 
 const toKebab = (s) =>
@@ -101,11 +102,12 @@ export default function plop(plop) {
     actions: [
       {
         type: "add",
-        path: "lib/content/lessons/{{slug}}.ts",
+        path: "packages/shared/src/content/lessons/{{slug}}.ts",
         templateFile: "plop-templates/lesson/lesson.ts.hbs",
       },
       () =>
-        "✏  Don't forget to import + push the new lesson into `lib/content/lessons.ts`. " +
+        "✏  Don't forget to import + push the new lesson into " +
+        "`packages/shared/src/content/lessons.ts`. " +
         "We keep registration explicit so the order is intentional.",
     ],
   });

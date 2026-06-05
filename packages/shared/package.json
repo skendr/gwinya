@@ -1,0 +1,22 @@
+{
+  "name": "@gwinya/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./db-types": "./src/db-types.ts",
+    "./domain/types": "./src/domain/types.ts",
+    "./domain/red-flags": "./src/domain/red-flags.ts",
+    "./content/lessons": "./src/content/lessons.ts",
+    "./content/checklists": "./src/content/checklists.ts",
+    "./content/patient-profile": "./src/content/patient-profile.ts",
+    "./format/dates": "./src/format/dates.ts",
+    "./logic/streak": "./src/logic/streak.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

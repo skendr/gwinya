@@ -6,7 +6,8 @@ import { db, isDbConfigured } from "@/lib/db/client";
 import { streak, symptomLogs, lessonProgress, profiles, foodScans } from "@/lib/db/schema";
 import { getUser } from "@/lib/auth/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isoDay, daysBetween } from "@/lib/format/dates";
+import { isoDay } from "@/lib/format/dates";
+import { computeNextStreak } from "@gwinya/shared/logic/streak";
 import type { SymptomLog } from "@/lib/domain/types";
 import {
   afterMealCheckToSymptomLog,
@@ -56,20 +57,19 @@ export async function recordCheckIn() {
   const current = await getStreak();
   if (current.lastCheckIn === today) return current;
 
-  const gap = current.lastCheckIn ? daysBetween(current.lastCheckIn, today) : null;
-  const count = gap === 1 ? current.count + 1 : 1;
+  const { count, lastCheckIn } = computeNextStreak(current, today);
 
   await db
     .insert(streak)
-    .values({ userId: user.id, count, lastCheckIn: today })
+    .values({ userId: user.id, count, lastCheckIn })
     .onConflictDoUpdate({
       target: streak.userId,
-      set: { count, lastCheckIn: today },
+      set: { count, lastCheckIn },
     });
 
   revalidatePath("/");
   revalidatePath("/progress");
-  return { count, lastCheckIn: today };
+  return { count, lastCheckIn };
 }
 
 /* ----------------------------------------------------------------------- */

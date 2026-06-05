@@ -1,7 +1,14 @@
-# pnpm 11 schema. Native-build scripts approved to run during install.
+# pnpm 11 schema. The Next.js web app stays at the repo root (its own
+# workspace package); the mobile Expo app and shared TS package are nested.
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Native-build scripts approved to run during install.
 # - sharp: Next.js image optimisation binary
 # - unrs-resolver: Rust-native resolver used by oxc/Turbopack
 allowBuilds:
   esbuild: true
+  msgpackr-extract: false
   sharp: true
   unrs-resolver: true
