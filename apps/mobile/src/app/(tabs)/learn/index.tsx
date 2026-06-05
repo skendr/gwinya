@@ -1,7 +1,11 @@
+import { useCallback, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Link } from "expo-router";
+import { Link, useFocusEffect } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { lessons } from "@gwinya/shared/content/lessons";
 import type { LessonLevel } from "@gwinya/shared/domain/types";
+import { useSession } from "@/lib/auth";
+import { getCompletedSlugs } from "@/lib/data";
 import { Eyebrow, Screen, Subtitle, Title } from "@/components/ui";
 import { colors, fonts, radius, spacing } from "@/theme";
 
@@ -18,6 +22,24 @@ const LEVEL_COLOR: Record<LessonLevel, { bg: string; fg: string }> = {
 };
 
 export default function LearnIndex() {
+  const { session } = useSession();
+  const [completed, setCompleted] = useState<Set<string>>(new Set());
+
+  // Refresh completion each time the list regains focus (e.g. after reading).
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      if (session) {
+        getCompletedSlugs(session.user.id).then((s) => {
+          if (active) setCompleted(s);
+        });
+      }
+      return () => {
+        active = false;
+      };
+    }, [session]),
+  );
+
   return (
     <Screen>
       <View style={{ gap: spacing.sm }}>
@@ -29,22 +51,25 @@ export default function LearnIndex() {
       <View style={{ gap: spacing.md }}>
         {lessons.map((lesson) => {
           const tone = LEVEL_COLOR[lesson.level];
+          const isDone = completed.has(lesson.slug);
           return (
             <Link
               key={lesson.slug}
               href={{ pathname: "/learn/[slug]", params: { slug: lesson.slug } }}
               asChild
             >
-              <Pressable
-                style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-              >
+              <Pressable style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
                 <View style={styles.metaRow}>
                   <View style={[styles.chip, { backgroundColor: tone.bg }]}>
                     <Text style={[styles.chipText, { color: tone.fg }]}>
                       {LEVEL_LABEL[lesson.level]}
                     </Text>
                   </View>
-                  <Text style={styles.minutes}>{lesson.minutes} min</Text>
+                  {isDone ? (
+                    <Ionicons name="checkmark-circle" size={20} color={colors.moss} />
+                  ) : (
+                    <Text style={styles.minutes}>{lesson.minutes} min</Text>
+                  )}
                 </View>
                 <Text style={styles.cardTitle}>{lesson.title}</Text>
                 <Text style={styles.cardBlurb}>{lesson.blurb}</Text>
