@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { Link, useFocusEffect } from "expo-router";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Link, useFocusEffect, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { lessons } from "@gwinya/shared/content/lessons";
 import { useSession, signOut } from "@/lib/auth";
@@ -53,6 +53,27 @@ export default function Today() {
         </View>
       ) : null}
 
+      <ActionCard
+        icon="mic-outline"
+        title="Meal companion"
+        subtitle="Talk it through, hands-free"
+        href={{ pathname: "/companion", params: { mode: "full" } }}
+      />
+
+      <ActionCard
+        icon="camera-outline"
+        title="Check your food"
+        subtitle="Photo a plate, compare to your plan"
+        href="/scan"
+      />
+
+      <ActionCard
+        icon="restaurant-outline"
+        title="Your meals"
+        subtitle="What you've saved over time"
+        href="/meals"
+      />
+
       <Card>
         <Text style={styles.cardEyebrow}>NEXT LESSON</Text>
         <Text style={styles.cardTitle}>{nextLesson.title}</Text>
@@ -71,7 +92,55 @@ export default function Today() {
   );
 }
 
+function ActionCard({
+  icon,
+  title,
+  subtitle,
+  href,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  href: Href;
+}) {
+  return (
+    <Link href={href} asChild>
+      <Pressable style={({ pressed }) => [styles.action, pressed && styles.pressed]}>
+        <View style={styles.actionIcon}>
+          <Ionicons name={icon} size={22} color={colors.clayDeep} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.actionTitle}>{title}</Text>
+          <Text style={styles.actionSub}>{subtitle}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.muted} />
+      </Pressable>
+    </Link>
+  );
+}
+
 const styles = StyleSheet.create({
+  action: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: colors.paper,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+  },
+  pressed: { opacity: 0.9, transform: [{ translateY: 1 }] },
+  actionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.pill,
+    backgroundColor: colors.claySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionTitle: { fontFamily: fonts.bodySemibold, fontSize: 17, color: colors.ink },
+  actionSub: { fontFamily: fonts.body, fontSize: 14, color: colors.muted },
   streakPill: {
     flexDirection: "row",
     alignItems: "center",

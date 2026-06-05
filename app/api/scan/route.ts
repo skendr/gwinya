@@ -2,7 +2,7 @@ import { generateObject, type CoreMessage } from "ai";
 import { z } from "zod";
 import { models, IDDSI_SCAN_SYSTEM_PROMPT, ScanResult } from "@/lib/ai";
 import { MODEL_IDS } from "@/lib/ai/models";
-import { createClient } from "@/lib/supabase/server";
+import { resolveUserId } from "@/lib/auth/bearer";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { db } from "@/lib/db/client";
 import { foodScans } from "@/lib/db/schema";
@@ -23,12 +23,9 @@ const RequestBody = z.object({
 const MAX_BASE64_BYTES = Math.floor(5 * 1024 * 1024 * 4 / 3); // ~5 MiB decoded
 
 export async function POST(req: Request) {
-  /* Auth ---------------------------------------------------------------- */
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  /* Auth (Bearer token from mobile, or cookies on web) ------------------ */
+  const userId = await resolveUserId(req);
+  if (!userId) {
     return Response.json({ error: "unauthorised" }, { status: 401 });
   }
 
@@ -122,7 +119,7 @@ export async function POST(req: Request) {
     const admin = createAdminClient();
     const ext = mimeType.split("/")[1]?.split("+")[0] ?? "jpg";
     const scanId = crypto.randomUUID();
-    const imagePath = `${user.id}/${scanId}.${ext}`;
+    const imagePath = `${userId}/${scanId}.${ext}`;
 
     const { error: uploadError } = await admin.storage
       .from("food-scans")
@@ -134,7 +131,7 @@ export async function POST(req: Request) {
 
     await db.insert(foodScans).values({
       id: scanId,
-      userId: user.id,
+      userId: userId,
       imagePath,
       predictedLevel: analysis.predictedLevel ?? null,
       levelName: analysis.levelName,

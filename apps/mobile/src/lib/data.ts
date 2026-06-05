@@ -105,3 +105,74 @@ export async function appendLog(userId: string, log: SymptomLog): Promise<void> 
 
 /** Re-exported so callers can normalise an in-memory list the same way. */
 export { upsertLogByDate };
+
+/* --------------------------- Food scans / meals -------------------------- */
+
+export type SavedMeal = {
+  id: string;
+  imagePath: string;
+  mealName: string | null;
+  predictedLevel: number | null;
+  levelName: string | null;
+  matchesPrescribed: string | null;
+  eatenAt: string | null;
+  createdAt: string;
+};
+
+/**
+ * Turn a draft food_scans row into a saved meal (RLS food_scans_owner_update).
+ * The row was created server-side by /api/scan; here we just flip saved=true
+ * and set the user-confirmed name + eaten time.
+ */
+export async function saveMeal(
+  userId: string,
+  scanId: string,
+  mealName: string,
+  eatenAt: Date,
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("food_scans")
+    .update({ meal_name: mealName.trim(), saved: true, eaten_at: eatenAt.toISOString() })
+    .eq("id", scanId)
+    .eq("user_id", userId);
+  return !error;
+}
+
+export async function getSavedMeals(userId: string): Promise<SavedMeal[]> {
+  const { data, error } = await supabase
+    .from("food_scans")
+    .select("id,image_path,meal_name,predicted_level,level_name,matches_prescribed,eaten_at,created_at")
+    .eq("user_id", userId)
+    .eq("saved", true)
+    .order("eaten_at", { ascending: false, nullsFirst: false })
+    .limit(200);
+  if (error || !data) return [];
+  return data.map((r) => ({
+    id: r.id as string,
+    imagePath: r.image_path as string,
+    mealName: (r.meal_name as string | null) ?? null,
+    predictedLevel: (r.predicted_level as number | null) ?? null,
+    levelName: (r.level_name as string | null) ?? null,
+    matchesPrescribed: (r.matches_prescribed as string | null) ?? null,
+    eatenAt: (r.eaten_at as string | null) ?? null,
+    createdAt: r.created_at as string,
+  }));
+}
+
+/**
+ * Delete the meal ROW (RLS food_scans_owner_delete). The storage object stays
+ * (the food-scans bucket has no client delete policy — uploads/deletes are
+ * server-side admin), so the image is orphaned; acceptable for now.
+ */
+export async function deleteMeal(userId: string, scanId: string): Promise<void> {
+  await supabase.from("food_scans").delete().eq("id", scanId).eq("user_id", userId);
+}
+
+/** Sign thumbnail URLs for the private food-scans bucket (own-folder SELECT policy). */
+export async function signMealThumbs(paths: string[]): Promise<Record<string, string | null>> {
+  if (paths.length === 0) return {};
+  const { data } = await supabase.storage.from("food-scans").createSignedUrls(paths, 60 * 30);
+  const map: Record<string, string | null> = {};
+  for (const row of data ?? []) map[row.path ?? ""] = row.signedUrl ?? null;
+  return map;
+}
